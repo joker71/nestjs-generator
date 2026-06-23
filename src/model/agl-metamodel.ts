@@ -7,11 +7,19 @@ export interface AglActivityNode {
     moduleActions: AglModuleAction[];
     outClasses: string[];      // target classes of outgoing edges
     isStart: boolean;          // ANode.init = true
-    nodeType: 'Action' | 'Decision' | 'Fork' | 'Join' | 'Merge';
+    nodeType: AglNoteType;
 }
 
 export interface AglModuleAction {
-    actName: 'open' | 'newObject' | 'setDataFieldValues' | 'createObject' | 'updateObject' | 'deleteObject' | 'reset' | 'cancel';
+    actName: AglActNameType;
     postStates: string[];      // e.g. ['Created'], ['NewObject']
     fieldNames?: string[];     // for setDataFieldValues
 }
+
+
+export type  AglActNameType =
+    'open' | 'newObject' | 'setDataFieldValues' | 'createObject' | 'updateObject' | 'deleteObject' | 'reset' | 'cancel';
+
+
+export type AglNoteType =
+    'Action' | 'Decision' | 'Fork' | 'Join' | 'Merge';

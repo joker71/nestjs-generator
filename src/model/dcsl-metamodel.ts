@@ -4,10 +4,6 @@ import {RbacModel, RbacRole} from "./rbac-metamodel";
 export type Visibility = 'private' | 'public' | 'protected';
 export type AssociationType = 'composition' | 'aggregation' | 'association' | 'dependency' | 'realization';
 export type Multiplicity = '0..1' | '1' | '0..*' | '1..*' | '*';
-export type ActionType =
-    "open" | "newObject" | "setDataFieldValues" | "createObject" | "updateObject" | "deleteObject"
-
-
 
 
 //#region Dcsl
