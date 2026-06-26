@@ -1,0 +1,43 @@
+@startuml CourseMan-Academic
+!define DOMAIN Academic
+
+' === Structural concern (DCSL) ===
+class Student <<Entity>> {
+  +id: Int <<Id, Auto>>
+  +name: String <<Length=30, NotOptional>>
+  +enrolments: Enrolment[*] <<Assoc(Enrolment, One2Many, 0..30)>>
+}
+
+class CourseModule <<Entity>> {
+  +id: Int <<Id>>
+  +name: String <<Length=50>>
+  +semester: Int
+}
+
+Student "1" -- "*" Enrolment
+CourseModule "1" -- "*" Enrolment
+
+' === RBAC concern ===
+class Registrar <<Role>>
+class Lecturer <<Role>>
+class Student_R <<Role>>
+
+class ReadStudent <<Permission>> {
+  +target: Student
+  +operation: "read"
+}
+class WriteStudent <<Permission>> {
+  +target: Student
+  +operation: "write"
+}
+
+Registrar ..> WriteStudent : <<grants>>
+Lecturer  ..> ReadStudent  : <<grants>>
+
+' === Constraints (đường ngắn; chi tiết ở .ocl) ===
+note top of Registrar
+  <<SSD>> with Finance::Auditor
+  <<Cardinality>> max=5
+end note
+
+@enduml
