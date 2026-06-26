@@ -1,0 +1,219 @@
+'
+' CourseManagement.puml
+' ─────────────────────
+' Example PlantUML model for ddd-codegen
+' Based on the CourseMan domain from:
+'   "AGL: Incorporating Behavioral Aspects into DDD" (Le & Dang)
+'   "DDD with DCSL" (Le, Dang & Nguyen)
+'
+' Demonstrates: AggregateRoot, Entity, ValueObject, DomainEvent,
+'               DomainService, Repository, UseCase, RBAC Roles
+'
+@startuml CourseManagement
+
+' ─────────────────────────────────────────────────────────────────────────────
+' BOUNDED CONTEXT: Enrollment
+' Corresponds to MOSA ModuleClass set for the enrollment activity (AGL paper §2)
+' ─────────────────────────────────────────────────────────────────────────────
+package "EnrollmentContext" <<BoundedContext>> {
+
+  ' ── Aggregate Root ──────────────────────────────────────────────────────
+  ' DCSL: DClass{mutable=true}, MOSA module owner
+  ' AGL: ANode{refCls=Student, init=true} — entry point of enrollment activity
+  class Student <<AggregateRoot>> {
+    - id: string
+    - name: string
+    - email: string
+    - helpRequested: boolean
+    --
+    + register(name: string, email: string): void
+    + enroll(courseId: string): Enrolment
+    + requestHelp(): void
+    + changeName(name: string): void
+  }
+
+  ' ── Entity ──────────────────────────────────────────────────────────────
+  ' DCSL: DClass{mutable=true} with cardinality constraints (min=1, max=8)
+  class CourseModule <<Entity>> {
+    - id: string
+    - code: string
+    - name: string
+    - semester: int
+    - credits: int
+    --
+    + updateDetails(name: string, credits: int): void
+  }
+
+  ' ── Association Class / Entity ──────────────────────────────────────────
+  ' DCSL: DAssoc{ascType=Many2Many} realised as entity (Enrolment)
+  ' AGL MAct: {newObject → setDataFieldValues → createObject}
+  class Enrolment <<Entity>> {
+    - id: string
+    - studentId: string
+    - courseModuleId: string
+    - enrolledAt: Date
+    - internalMark: number
+    - examMark: number
+    - finalGrade: string
+    --
+    + updateMarks(internal: number, exam: number): void
+    + computeFinalGrade(): string
+  }
+
+  ' ── Value Object ────────────────────────────────────────────────────────
+  ' DCSL: DClass{mutable=false, immutable} — identity by value
+  class StudentName <<ValueObject>> {
+    - firstName: string
+    - lastName: string
+    --
+    + fullName(): string
+    + initials(): string
+  }
+
+  ' ── Value Object ────────────────────────────────────────────────────────
+  class Grade <<ValueObject>> {
+    - internalMark: number
+    - examMark: number
+    --
+    + finalGrade(): string
+    + isPassing(): boolean
+  }
+
+  ' ── Domain Event ────────────────────────────────────────────────────────
+  ' AGL: emitted as MAct post-state {Created} after createObject
+  class StudentEnrolledEvent <<DomainEvent>> {
+    + studentId: string
+    + courseModuleId: string
+    + enrolledAt: Date
+  }
+
+  ' ── Domain Event ────────────────────────────────────────────────────────
+  class HelpRequestedEvent <<DomainEvent>> {
+    + studentId: string
+    + requestedAt: Date
+  }
+
+  ' ── Domain Service ──────────────────────────────────────────────────────
+  ' DCSL: DOpt{type=Service} — logic spanning multiple aggregates
+  ' AGL: ANode in decisional pattern (DHelpOrSClass in paper)
+  class EnrollmentService <<DomainService>> {
+    + enroll(student: Student, courseId: string): Enrolment
+    + unenroll(studentId: string, courseId: string): void
+    + validateEnrollment(student: Student, courseModule: CourseModule): boolean
+  }
+
+  ' ── Repository Interface ────────────────────────────────────────────────
+  ' DCSL: DAssoc between domain model and infrastructure layer
+  interface IStudentRepository <<Repository>> {
+    + findById(id: string): Promise<Student>
+    + findByEmail(email: string): Promise<Student>
+    + findAll(): Promise<Student[]>
+    + save(student: Student): Promise<Student>
+    + delete(id: string): Promise<void>
+  }
+
+  interface ICourseModuleRepository <<Repository>> {
+    + findById(id: string): Promise<CourseModule>
+    + findBySemester(semester: number): Promise<CourseModule[]>
+    + findAll(): Promise<CourseModule[]>
+    + save(courseModule: CourseModule): Promise<CourseModule>
+    + delete(id: string): Promise<void>
+  }
+
+  ' ── Use Cases (AGL Structured Atomic Actions) ───────────────────────────
+  ' AGL: SAA sequences — open → newObject → setDataFieldValues → createObject
+  class RegisterStudentUseCase <<UseCase>> {
+    - name: string
+    - email: string
+  }
+
+  class EnrollStudentUseCase <<UseCase>> {
+    - studentId: string
+    - courseModuleId: string
+  }
+
+  ' ── Associations (DCSL DAssoc) ──────────────────────────────────────────
+  Student "1" *-- "0..*" Enrolment : enrolls-in
+  Student ..> StudentEnrolledEvent : emits
+  Student ..> HelpRequestedEvent : emits
+  Enrolment "0..*" --> "1" CourseModule : belongs-to
+}
+
+' ─────────────────────────────────────────────────────────────────────────────
+' BOUNDED CONTEXT: SClass (Student Class Registration)
+' Separate bounded context — the "Register student into classes" activity node
+' (AGL paper Fig. 8 — sequential pattern)
+' ─────────────────────────────────────────────────────────────────────────────
+package "SClassContext" <<BoundedContext>> {
+
+  class SClass <<AggregateRoot>> {
+    - id: string
+    - name: string
+    - capacity: int
+    - academicYear: string
+    --
+    + addStudent(studentId: string): void
+    + removeStudent(studentId: string): void
+  }
+
+  class SClassRegistration <<Entity>> {
+    - id: string
+    - studentId: string
+    - sclassId: string
+    - registeredAt: Date
+    --
+    + confirm(): void
+    + cancel(): void
+  }
+
+  class RegisterIntoClassEvent <<DomainEvent>> {
+    + studentId: string
+    + sclassId: string
+    + registeredAt: Date
+  }
+
+  SClass "1" *-- "0..*" SClassRegistration : contains
+  SClassRegistration ..> RegisterIntoClassEvent : emits
+}
+
+' ─────────────────────────────────────────────────────────────────────────────
+' RBAC Model
+' Based on: Sandhu et al. (1996) RBAC₀/RBAC₁
+'           "Using UML to Visualize RBAC Constraints"
+' ─────────────────────────────────────────────────────────────────────────────
+package "RBAC" <<AccessControl>> {
+
+  ' RBAC₁ Senior role — inherits all EnrollmentOfficer permissions
+  class Admin <<Role>> {
+    MANAGE_STUDENTS
+    ENROLL_STUDENTS
+    VIEW_STUDENTS
+    DELETE_STUDENTS
+    MANAGE_COURSES
+    VIEW_COURSES
+    DELETE_COURSES
+    MANAGE_SCLASSES
+    VIEW_REPORTS
+    MANAGE_ROLES
+  }
+
+  ' RBAC₁ Junior role
+  class EnrollmentOfficer <<Role>> {
+    ENROLL_STUDENTS
+    VIEW_STUDENTS
+    VIEW_COURSES
+    MANAGE_SCLASSES
+  }
+
+  ' RBAC₁ Junior role
+  class StudentRole <<Role>> {
+    VIEW_OWN_PROFILE
+    VIEW_COURSES
+    VIEW_OWN_ENROLLMENTS
+  }
+
+  ' RBAC₁ role hierarchy: Admin → EnrollmentOfficer (Admin inherits officer perms)
+  Admin --|> EnrollmentOfficer
+}
+
+@enduml

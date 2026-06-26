@@ -1,6 +1,3 @@
-
-
-
 import type {
     AssociationType, BoundedContext,
     DddStereotype, DomainAssociation, DomainClass,
@@ -10,30 +7,32 @@ import type {
     Visibility
 } from "../model/dcsl-metamodel";
 import type {RbacRole} from "../model/rbac-metamodel";
-import {readFileSync} from "node:fs";
+
+
+import {readFileSync} from 'node:fs';
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const STEREOTYPE_MAP: Record<string, DddStereotype> = {
-    aggregateroot:  'AggregateRoot',
+    aggregateroot: 'AggregateRoot',
     'aggregate-root': 'AggregateRoot',
-    aggregate:      'AggregateRoot',
-    entity:         'Entity',
-    valueobject:    'ValueObject',
+    aggregate: 'AggregateRoot',
+    entity: 'Entity',
+    valueobject: 'ValueObject',
     'value-object': 'ValueObject',
-    vo:             'ValueObject',
-    domainservice:  'DomainService',
+    vo: 'ValueObject',
+    domainservice: 'DomainService',
     'domain-service': 'DomainService',
-    service:        'DomainService',
-    domainevent:    'DomainEvent',
+    service: 'DomainService',
+    domainevent: 'DomainEvent',
     'domain-event': 'DomainEvent',
-    event:          'DomainEvent',
-    repository:     'Repository',
-    repo:           'Repository',
-    usecase:        'UseCase',
-    'use-case':     'UseCase',
-    role:           'Role',
+    event: 'DomainEvent',
+    repository: 'Repository',
+    repo: 'Repository',
+    usecase: 'UseCase',
+    'use-case': 'UseCase',
+    role: 'Role',
 };
 
 function parseStereotype(raw: string): DddStereotype | null {
@@ -101,7 +100,7 @@ function parseMethod(line: string): DomainMethod | null {
         .filter(Boolean)
         .map(p => {
             const parts = p.split(':').map(x => x.trim());
-            return { name: parts[0] ?? p, type: parts[1] ?? 'any' };
+            return {name: parts[0] ?? p, type: parts[1] ?? 'any'};
         });
     const retType = returnType?.trim() ?? 'void';
     const isAsync = retType.startsWith('Promise<') || retType.toLowerCase() === 'promise';
@@ -145,16 +144,16 @@ export class PlantUmlParser {
                 const ctxName = pkgMatch[1].trim();
                 const ctxStereotype = pkgMatch[2]?.toLowerCase();
                 this.pos++;
-                const { classes, associations } = this.parsePackageBody(ctxName, ctxStereotype);
+                const {classes, associations} = this.parsePackageBody(ctxName, ctxStereotype);
 
                 // Separate RBAC roles from domain classes
                 const domainClasses = classes.filter(c => c.stereotype !== 'Role');
                 const roleClasses = classes.filter(c => c.stereotype === 'Role');
                 roleClasses.forEach(rc => {
-                    rbacRoles.push({ name: rc.name, permissions: rc.permissions });
+                    rbacRoles.push({name: rc.name, permissions: rc.permissions});
                 });
 
-                boundedContexts.push({ name: ctxName, classes: domainClasses, associations });
+                boundedContexts.push({name: ctxName, classes: domainClasses, associations});
                 continue;
             }
 
@@ -162,15 +161,15 @@ export class PlantUmlParser {
             const classInfo = this.tryParseClassHeader(line, 'DefaultContext');
             if (classInfo) {
                 this.pos++;
-                const { cls, needsBody } = classInfo;
+                const {cls, needsBody} = classInfo;
                 if (needsBody) {
-                    const { fields, methods, permissions } = this.parseClassBody(cls.stereotype);
+                    const {fields, methods, permissions} = this.parseClassBody(cls.stereotype);
                     cls.fields = fields;
                     cls.methods = methods;
                     cls.permissions = permissions;
                 }
                 if (cls.stereotype === 'Role') {
-                    rbacRoles.push({ name: cls.name, permissions: cls.permissions });
+                    rbacRoles.push({name: cls.name, permissions: cls.permissions});
                 } else {
                     orphanClasses.push(cls);
                 }
@@ -182,7 +181,7 @@ export class PlantUmlParser {
             if (assoc) {
                 // Role hierarchy (--|>)
                 if (line.includes('--|>')) {
-                    roleHierarchy.push({ child: assoc.sourceClass, parent: assoc.targetClass });
+                    roleHierarchy.push({child: assoc.sourceClass, parent: assoc.targetClass});
                 } else {
                     orphanAssociations.push(assoc);
                 }
@@ -195,7 +194,7 @@ export class PlantUmlParser {
         }
 
         // Apply role hierarchy (RBAC₁)
-        roleHierarchy.forEach(({ child, parent }) => {
+        roleHierarchy.forEach(({child, parent}) => {
             const role = rbacRoles.find(r => r.name === child);
             if (role) role.extendsRole = parent;
         });
@@ -219,7 +218,7 @@ export class PlantUmlParser {
         return {
             appName,
             boundedContexts,
-            rbac: { roles: rbacRoles, allPermissions },
+            rbac: {roles: rbacRoles, allPermissions},
         };
     }
 
@@ -236,7 +235,11 @@ export class PlantUmlParser {
         while (this.pos < this.lines.length) {
             const line = this.lines[this.pos];
 
-            if (line === '{') { depth++; this.pos++; continue; }
+            if (line === '{') {
+                depth++;
+                this.pos++;
+                continue;
+            }
             if (line === '}') {
                 depth--;
                 this.pos++;
@@ -257,9 +260,9 @@ export class PlantUmlParser {
             const classInfo = this.tryParseClassHeader(line, contextName);
             if (classInfo) {
                 this.pos++;
-                const { cls, needsBody } = classInfo;
+                const {cls, needsBody} = classInfo;
                 if (needsBody) {
-                    const { fields, methods, permissions } = this.parseClassBody(cls.stereotype);
+                    const {fields, methods, permissions} = this.parseClassBody(cls.stereotype);
                     cls.fields = fields;
                     cls.methods = methods;
                     cls.permissions = permissions;
@@ -284,7 +287,7 @@ export class PlantUmlParser {
             this.pos++;
         }
 
-        return { classes, associations };
+        return {classes, associations};
     }
 
     // ─── Class header ─────────────────────────────────────────────────────────
@@ -322,7 +325,7 @@ export class PlantUmlParser {
             permissions: [],
         };
 
-        return { cls, needsBody: hasBody === '{' };
+        return {cls, needsBody: hasBody === '{'};
     }
 
     // ─── Class body ───────────────────────────────────────────────────────────
@@ -337,8 +340,14 @@ export class PlantUmlParser {
         while (this.pos < this.lines.length) {
             const line = this.lines[this.pos];
 
-            if (line === '}') { this.pos++; break; }
-            if (line === '--' || line === '==' || line === '__') { this.pos++; continue; }
+            if (line === '}') {
+                this.pos++;
+                break;
+            }
+            if (line === '--' || line === '==' || line === '__') {
+                this.pos++;
+                continue;
+            }
 
             // Role permission lines: all-caps identifiers with optional underscores
             if (stereotype === 'Role' && /^[A-Z][A-Z0-9_]+$/.test(line)) {
@@ -366,7 +375,7 @@ export class PlantUmlParser {
             this.pos++;
         }
 
-        return { fields, methods, permissions };
+        return {fields, methods, permissions};
     }
 
     // ─── Association ─────────────────────────────────────────────────────────

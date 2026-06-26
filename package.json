@@ -3,8 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "ddd-codegen": "dist/cli.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "start": "ts-node src/cli.ts",
+    "generate": "ts-node src/cli.ts generate",
+    "dev": "ts-node src/cli.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +25,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }

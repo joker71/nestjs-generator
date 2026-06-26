@@ -1,0 +1,995 @@
+{
+  "appName": "course-management",
+  "boundedContexts": [
+    {
+      "name": "EnrollmentContext",
+      "classes": [
+        {
+          "name": "Student",
+          "stereotype": "AggregateRoot",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "helpRequested",
+              "type": "boolean",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "createdAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "updatedAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": true,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "register",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "email",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "createObject"
+            },
+            {
+              "name": "enroll",
+              "visibility": "public",
+              "returnType": "Enrolment",
+              "parameters": [
+                {
+                  "name": "courseId",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false
+            },
+            {
+              "name": "requestHelp",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [],
+              "isAsync": false
+            },
+            {
+              "name": "changeName",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "updateObject"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "CourseModule",
+          "stereotype": "Entity",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": true
+            },
+            {
+              "name": "code",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "semester",
+              "type": "int",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "credits",
+              "type": "int",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "updateDetails",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "credits",
+                  "type": "int"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "updateObject"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "Enrolment",
+          "stereotype": "Entity",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": true
+            },
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "courseModuleId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "enrolledAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "internalMark",
+              "type": "number",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "examMark",
+              "type": "number",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "finalGrade",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "updateMarks",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "internal",
+                  "type": "number"
+                },
+                {
+                  "name": "exam",
+                  "type": "number"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "updateObject"
+            },
+            {
+              "name": "computeFinalGrade",
+              "visibility": "public",
+              "returnType": "string",
+              "parameters": [],
+              "isAsync": false
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "StudentName",
+          "stereotype": "ValueObject",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "firstName",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "lastName",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "fullName",
+              "visibility": "public",
+              "returnType": "string",
+              "parameters": [],
+              "isAsync": false
+            },
+            {
+              "name": "initials",
+              "visibility": "public",
+              "returnType": "string",
+              "parameters": [],
+              "isAsync": false
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": false,
+          "permissions": []
+        },
+        {
+          "name": "Grade",
+          "stereotype": "ValueObject",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "internalMark",
+              "type": "number",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "examMark",
+              "type": "number",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "finalGrade",
+              "visibility": "public",
+              "returnType": "string",
+              "parameters": [],
+              "isAsync": false
+            },
+            {
+              "name": "isPassing",
+              "visibility": "public",
+              "returnType": "boolean",
+              "parameters": [],
+              "isAsync": false
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": false,
+          "permissions": []
+        },
+        {
+          "name": "StudentEnrolledEvent",
+          "stereotype": "DomainEvent",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "courseModuleId",
+              "type": "string",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "enrolledAt",
+              "type": "Date",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [],
+          "isAbstract": false,
+          "isMutable": false,
+          "permissions": []
+        },
+        {
+          "name": "HelpRequestedEvent",
+          "stereotype": "DomainEvent",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "requestedAt",
+              "type": "Date",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [],
+          "isAbstract": false,
+          "isMutable": false,
+          "permissions": []
+        },
+        {
+          "name": "EnrollmentService",
+          "stereotype": "DomainService",
+          "boundedContext": "EnrollmentContext",
+          "fields": [],
+          "methods": [
+            {
+              "name": "enroll",
+              "visibility": "public",
+              "returnType": "Enrolment",
+              "parameters": [
+                {
+                  "name": "student",
+                  "type": "Student"
+                },
+                {
+                  "name": "courseId",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false
+            },
+            {
+              "name": "unenroll",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "studentId",
+                  "type": "string"
+                },
+                {
+                  "name": "courseId",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false
+            },
+            {
+              "name": "validateEnrollment",
+              "visibility": "public",
+              "returnType": "boolean",
+              "parameters": [
+                {
+                  "name": "student",
+                  "type": "Student"
+                },
+                {
+                  "name": "courseModule",
+                  "type": "CourseModule"
+                }
+              ],
+              "isAsync": false
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "IStudentRepository",
+          "stereotype": "Repository",
+          "boundedContext": "EnrollmentContext",
+          "fields": [],
+          "methods": [
+            {
+              "name": "findById",
+              "visibility": "public",
+              "returnType": "Promise<Student>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "findByEmail",
+              "visibility": "public",
+              "returnType": "Promise<Student>",
+              "parameters": [
+                {
+                  "name": "email",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "findAll",
+              "visibility": "public",
+              "returnType": "Promise<Student[]>",
+              "parameters": [],
+              "isAsync": true
+            },
+            {
+              "name": "save",
+              "visibility": "public",
+              "returnType": "Promise<Student>",
+              "parameters": [
+                {
+                  "name": "student",
+                  "type": "Student"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "delete",
+              "visibility": "public",
+              "returnType": "Promise<void>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true,
+              "moduleAction": "deleteObject"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "ICourseModuleRepository",
+          "stereotype": "Repository",
+          "boundedContext": "EnrollmentContext",
+          "fields": [],
+          "methods": [
+            {
+              "name": "findById",
+              "visibility": "public",
+              "returnType": "Promise<CourseModule>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "findBySemester",
+              "visibility": "public",
+              "returnType": "Promise<CourseModule[]>",
+              "parameters": [
+                {
+                  "name": "semester",
+                  "type": "number"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "findAll",
+              "visibility": "public",
+              "returnType": "Promise<CourseModule[]>",
+              "parameters": [],
+              "isAsync": true
+            },
+            {
+              "name": "save",
+              "visibility": "public",
+              "returnType": "Promise<CourseModule>",
+              "parameters": [
+                {
+                  "name": "courseModule",
+                  "type": "CourseModule"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "delete",
+              "visibility": "public",
+              "returnType": "Promise<void>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true,
+              "moduleAction": "deleteObject"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "RegisterStudentUseCase",
+          "stereotype": "UseCase",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "EnrollStudentUseCase",
+          "stereotype": "UseCase",
+          "boundedContext": "EnrollmentContext",
+          "fields": [
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "courseModuleId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        }
+      ],
+      "associations": [
+        {
+          "sourceClass": "Student",
+          "targetClass": "StudentEnrolledEvent",
+          "type": "dependency",
+          "sourceMultiplicity": "1",
+          "targetMultiplicity": "1",
+          "label": "emits"
+        },
+        {
+          "sourceClass": "Student",
+          "targetClass": "HelpRequestedEvent",
+          "type": "dependency",
+          "sourceMultiplicity": "1",
+          "targetMultiplicity": "1",
+          "label": "emits"
+        }
+      ]
+    },
+    {
+      "name": "SClassContext",
+      "classes": [
+        {
+          "name": "SClass",
+          "stereotype": "AggregateRoot",
+          "boundedContext": "SClassContext",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "capacity",
+              "type": "int",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "academicYear",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "createdAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "updatedAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": true,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "addStudent",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "studentId",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "createObject"
+            },
+            {
+              "name": "removeStudent",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [
+                {
+                  "name": "studentId",
+                  "type": "string"
+                }
+              ],
+              "isAsync": false,
+              "moduleAction": "deleteObject"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "ISClassRepository",
+          "stereotype": "Repository",
+          "boundedContext": "SClassContext",
+          "isAbstract": true,
+          "isMutable": false,
+          "permissions": [],
+          "fields": [],
+          "methods": [
+            {
+              "name": "findById",
+              "visibility": "public",
+              "returnType": "Promise<SClass | null>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "findAll",
+              "visibility": "public",
+              "returnType": "Promise<SClass[]>",
+              "parameters": [],
+              "isAsync": true
+            },
+            {
+              "name": "save",
+              "visibility": "public",
+              "returnType": "Promise<SClass>",
+              "parameters": [
+                {
+                  "name": "sClass",
+                  "type": "SClass"
+                }
+              ],
+              "isAsync": true
+            },
+            {
+              "name": "delete",
+              "visibility": "public",
+              "returnType": "Promise<void>",
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ],
+              "isAsync": true
+            }
+          ]
+        },
+        {
+          "name": "SClassRegistration",
+          "stereotype": "Entity",
+          "boundedContext": "SClassContext",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": true
+            },
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "sclassId",
+              "type": "string",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "registeredAt",
+              "type": "Date",
+              "visibility": "private",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [
+            {
+              "name": "confirm",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [],
+              "isAsync": false
+            },
+            {
+              "name": "cancel",
+              "visibility": "public",
+              "returnType": "void",
+              "parameters": [],
+              "isAsync": false,
+              "moduleAction": "cancel"
+            }
+          ],
+          "isAbstract": false,
+          "isMutable": true,
+          "permissions": []
+        },
+        {
+          "name": "RegisterIntoClassEvent",
+          "stereotype": "DomainEvent",
+          "boundedContext": "SClassContext",
+          "fields": [
+            {
+              "name": "studentId",
+              "type": "string",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "sclassId",
+              "type": "string",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            },
+            {
+              "name": "registeredAt",
+              "type": "Date",
+              "visibility": "public",
+              "isOptional": false,
+              "isCollection": false,
+              "isId": false
+            }
+          ],
+          "methods": [],
+          "isAbstract": false,
+          "isMutable": false,
+          "permissions": []
+        }
+      ],
+      "associations": [
+        {
+          "sourceClass": "SClassRegistration",
+          "targetClass": "RegisterIntoClassEvent",
+          "type": "dependency",
+          "sourceMultiplicity": "1",
+          "targetMultiplicity": "1",
+          "label": "emits"
+        }
+      ]
+    },
+    {
+      "name": "RBAC",
+      "classes": [],
+      "associations": []
+    }
+  ],
+  "rbac": {
+    "roles": [
+      {
+        "name": "Admin",
+        "permissions": [
+          "MANAGE_STUDENTS",
+          "ENROLL_STUDENTS",
+          "VIEW_STUDENTS",
+          "DELETE_STUDENTS",
+          "MANAGE_COURSES",
+          "VIEW_COURSES",
+          "DELETE_COURSES",
+          "MANAGE_SCLASSES",
+          "VIEW_REPORTS",
+          "MANAGE_ROLES"
+        ]
+      },
+      {
+        "name": "EnrollmentOfficer",
+        "permissions": [
+          "ENROLL_STUDENTS",
+          "VIEW_STUDENTS",
+          "VIEW_COURSES",
+          "MANAGE_SCLASSES"
+        ]
+      },
+      {
+        "name": "StudentRole",
+        "permissions": [
+          "VIEW_OWN_PROFILE",
+          "VIEW_COURSES",
+          "VIEW_OWN_ENROLLMENTS"
+        ]
+      }
+    ],
+    "allPermissions": [
+      "DELETE_COURSES",
+      "DELETE_STUDENTS",
+      "ENROLL_STUDENTS",
+      "MANAGE_COURSES",
+      "MANAGE_ROLES",
+      "MANAGE_SCLASSES",
+      "MANAGE_STUDENTS",
+      "VIEW_COURSES",
+      "VIEW_OWN_ENROLLMENTS",
+      "VIEW_OWN_PROFILE",
+      "VIEW_REPORTS",
+      "VIEW_STUDENTS"
+    ]
+  }
+}

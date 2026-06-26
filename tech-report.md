@@ -74,7 +74,8 @@ Khoảng trống đề tài lấp: UDML đã liệt kê RBAC như một concern 
 │                              INPUT LAYER                                     │
 │                                                                              │
 │   PlantUML (.puml)        Mermaid (.mmd)        OCL (.ocl)                   │
-│   - class diagram         - classDiagram        - WF invariants              │
+│   (INPUT chính)           (Có thể triển khai)                               |
+|    - class diagram         - classDiagram        - WF invariants             │
 │   - stereotypes <<Role>>  - relations           - SSD/DSD/cardinality        │
 │   - note OCL hint                               - cross-domain inv           │
 └────────────┬────────────────────┬─────────────────────┬─────────────────────┘
