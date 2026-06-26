@@ -13,4 +13,4 @@ export interface I{{aggregateClass}}Repository {
 {{/each}}
 }
 
-export const {{aggregateClass | uppercase}}_REPOSITORY_TOKEN = Symbol('I{{aggregateClass}}Repository');
+export const {{uppercase aggregateClass}}_REPOSITORY_TOKEN = Symbol('I{{aggregateClass}}Repository');

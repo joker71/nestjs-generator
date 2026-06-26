@@ -17,7 +17,7 @@ import { Permission } from './permissions.enum';
  * Inherited permissions from role hierarchy are resolved at runtime by RbacGuard.
  */
 export const ROLE_PERMISSION_MAP: Record<Role, Permission[]> = {
-{{#each roles}}  [Role.{{name | uppercase}}]: [
+{{#each roles}}  [Role.{{uppercase name}}]: [
 {{#each permissions}}    Permission.{{this}},
 {{/each}}  ],
 {{/each}}

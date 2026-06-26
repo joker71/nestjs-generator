@@ -9,7 +9,7 @@
  */
 
 export enum Role {
-{{#each roles}}  {{name | uppercase}} = '{{name}}',
+{{#each roles}}  {{uppercase name}} = '{{name}}',
 {{/each}}
 }
 
@@ -18,6 +18,6 @@ export enum Role {
  * Each role inherits the permissions of its parent.
  */
 export const ROLE_HIERARCHY: Partial<Record<Role, Role>> = {
-{{#each roles}}{{#if extendsRole}}  [Role.{{name | uppercase}}]: Role.{{extendsRole | uppercase}},
+{{#each roles}}{{#if extendsRole}}  [Role.{{uppercase name}}]: Role.{{uppercase extendsRole}},
 {{/if}}{{/each}}
 };

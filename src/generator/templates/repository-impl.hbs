@@ -13,7 +13,7 @@ import { Repository } from 'typeorm';
 import { {{aggregateClass}} } from '../../domain/entities/{{aggregateClassKebab}}.entity';
 import {
   I{{aggregateClass}}Repository,
-  {{aggregateClass | uppercase}}_REPOSITORY_TOKEN,
+    {{uppercase aggregateClass}}_REPOSITORY_TOKEN,
 } from '../../domain/repositories/i-{{aggregateClassKebab}}.repository';
 
 @Injectable()

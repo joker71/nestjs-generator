@@ -13,7 +13,7 @@ import { Inject } from '@nestjs/common';
 import { {{aggregateClass}} } from '../../domain/entities/{{aggregateClassKebab}}.entity';
 import {
   I{{aggregateClass}}Repository,
-  {{aggregateClass | uppercase}}_REPOSITORY_TOKEN,
+  {{uppercase aggregateClass}}_REPOSITORY_TOKEN,
 } from '../../domain/repositories/i-{{aggregateClassKebab}}.repository';
 
 // ─── Command (AGL MAct input / fieldValSet) ──────────────────────────────────
@@ -30,7 +30,7 @@ export class {{useCaseName}}Command {
 @CommandHandler({{useCaseName}}Command)
 export class {{useCaseName}}UseCase implements ICommandHandler<{{useCaseName}}Command> {
   constructor(
-    @Inject({{aggregateClass | uppercase}}_REPOSITORY_TOKEN)
+    @Inject({{uppercase aggregateClass}}_REPOSITORY_TOKEN)
     private readonly {{aggregateClassCamel}}Repository: I{{aggregateClass}}Repository,
     private readonly eventBus: EventBus,
   ) {}
