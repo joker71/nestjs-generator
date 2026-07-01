@@ -35,6 +35,20 @@ function writeFile(filePath: string, content: string): void {
     fs.writeFileSync(filePath, content, 'utf-8');
 }
 
+// ─── AGL activity input → generation-time trace comment ──────────────────────
+// Surfaces whatever the activity-diagram parser attached to `cls.activityNodes`
+// so the behavioral (AGL) input isn't parsed and then dropped — it shows up as a
+// traceable comment on the generated use-case, next to the DCSL structural fields.
+function aglTrace(cls: DomainClass): string[] {
+    return (cls.activityNodes ?? []).map(node => {
+        const seq = node.moduleActions.length
+            ? node.moduleActions.map(a => a.actName).join(' → ')
+            : node.label;
+        const posts = node.moduleActions.flatMap(a => a.postStates);
+        return posts.length ? `${seq}  ⇒ ${[...new Set(posts)].join(', ')}` : seq;
+    });
+}
+
 
 function classCtx(cls: DomainClass, ctx: BoundedContext, extra: Record<string, unknown> = {}): Record<string, unknown> {
     return {
@@ -71,6 +85,11 @@ export class CodeGenerator {
     // ─── Bounded Context ───────────────────────────────────────────────────────
 
     private generateContext(ctx: BoundedContext): void {
+        // Packages that resolved to zero domain classes (e.g. an RBAC/AccessControl
+        // package containing only <<Role>> definitions) carry nothing to scaffold —
+        // skip them instead of emitting an empty NestJS module.
+        if (ctx.classes.length === 0) return;
+
         const ctxDir = path.join(this.outDir, kebabCase(ctx.name));
 
         for (const cls of ctx.classes) {
@@ -232,6 +251,7 @@ export class CodeGenerator {
             aggregateClassKebab: kebabCase(aggregateClass),
             aggregateClassCamel: camelCase(aggregateClass),
             commandFields: cls.fields.filter(f => !f.isId),
+            aglTrace: aglTrace(cls),
         };
         writeFile(
             path.join(ctxDir, 'application', 'use-cases', kebabCase(useCaseName), `${kebabCase(useCaseName)}.use-case.ts`),
@@ -248,6 +268,7 @@ export class CodeGenerator {
             aggregateClassKebab: kebabCase(cls.name),
             aggregateClassCamel: camelCase(cls.name),
             commandFields: cls.fields.filter(f => !f.isId && !['createdAt', 'updatedAt'].includes(f.name)),
+            aglTrace: aglTrace(cls),
         };
         writeFile(
             path.join(ctxDir, 'application', 'use-cases', kebabCase(useCaseName), `${kebabCase(useCaseName)}.use-case.ts`),
@@ -326,6 +347,11 @@ export class CodeGenerator {
         writeFile(
             path.join(decoratorsDir, 'permissions.decorator.ts'),
             tpl('decorators')({})
+        );
+
+        writeFile(
+            path.join(decoratorsDir, 'roles.decorator.ts'),
+            tpl('roles.decorator')({})
         );
     }
 }

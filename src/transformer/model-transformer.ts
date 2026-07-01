@@ -1,5 +1,6 @@
 import type {BoundedContext, DomainClass, DomainField, DomainMetamodel, DomainMethod} from "../model/dcsl-metamodel";
 import type {RbacRole} from "../model/rbac-metamodel";
+import {constantCase} from 'change-case';
 // ─── AGL Module Action keywords → moduleAction tag ───────────────────────────
 
 const MODULE_ACTION_KEYWORDS: Record<string, string> = {
@@ -107,7 +108,7 @@ export class ModelTransformer {
         model.boundedContexts = model.boundedContexts.map((ctx: any) =>
             this.transformContext(ctx, model)
         );
-        model.rbac = this.transformRbac(model.rbac.roles);
+        model.rbac = this.transformRbac(model.rbac.roles, model.boundedContexts);
         return model;
     }
 
@@ -214,7 +215,10 @@ export class ModelTransformer {
 
     // ─── RBAC (Sandhu96 RBAC₁ — role hierarchy permission propagation) ────────
 
-    private transformRbac(roles: RbacRole[]): { roles: RbacRole[]; allPermissions: string[] } {
+    private transformRbac(
+        roles: RbacRole[],
+        boundedContexts: BoundedContext[]
+    ): { roles: RbacRole[]; allPermissions: string[] } {
         // Build role map
         const roleMap = new Map<string, RbacRole>();
         roles.forEach(r => roleMap.set(r.name, {...r, permissions: [...r.permissions]}));
@@ -239,8 +243,26 @@ export class ModelTransformer {
         }
 
         const enrichedRoles = [...roleMap.values()];
-        const allPermissions = [...new Set(enrichedRoles.flatMap(r => r.permissions))].sort();
+        const roleDerivedPermissions = enrichedRoles.flatMap(r => r.permissions);
+
+        // The generated controller (controller.hbs) always guards its CRUD endpoints with
+        // VIEW_{X}S / CREATE_{X} / UPDATE_{X} / DELETE_{X} permission checks, regardless of
+        // whether the modeler declared those exact literals inside a <<Role>> block. If they
+        // were missing, permissions.enum.ts wouldn't contain them and the generated code
+        // would fail to compile. Make sure every AggregateRoot's standard CRUD permissions
+        // always exist in the enum; roles still only receive whatever was explicitly modeled.
+        const crudPermissions = boundedContexts
+            .flatMap(ctx => ctx.classes)
+            .filter(c => c.stereotype === 'AggregateRoot')
+            .flatMap(c => this.standardCrudPermissions(c.name));
+
+        const allPermissions = [...new Set([...roleDerivedPermissions, ...crudPermissions])].sort();
 
         return {roles: enrichedRoles, allPermissions};
+    }
+
+    private standardCrudPermissions(className: string): string[] {
+        const upper = constantCase(className);
+        return [`VIEW_${upper}S`, `CREATE_${upper}`, `UPDATE_${upper}`, `DELETE_${upper}`];
     }
 }

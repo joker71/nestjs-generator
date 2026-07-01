@@ -1,4 +1,5 @@
 export { PlantUmlParser } from './parser/plantuml-parser';
+export { ActivityDiagramParser } from './parser/activity-parser';
 export { ModelTransformer } from './transformer/model-transformer';
 export { CodeGenerator } from './generator/code-generator';
 export * from './model/agl-metamodel';

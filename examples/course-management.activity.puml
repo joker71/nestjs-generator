@@ -1,0 +1,38 @@
+'
+' course-management.activity.puml
+' ───────────────────────────────
+' AGL behavioral input — companion to course-management.puml.
+' Auto-detected by PlantUmlParser (same base name + `.activity.puml`) or passed
+' explicitly with `-a course-management.activity.puml`.
+'
+' Demonstrates the AGL Structured Atomic Action (SAA) sequence
+'   open → newObject → setDataFieldValues → createObject
+' for the two <<UseCase>> classes already declared in course-management.puml,
+' plus a Decision node modeling Student.helpRequested (AGL "DHelpOrSClass" pattern
+' referenced in EnrollmentService's comment).
+'
+@startuml CourseManagement-Activity
+
+start
+
+|RegisterStudentUseCase|
+:open;
+:newObject(Student);
+:setDataFieldValues(name, email);
+:createObject(Student) <<Created>>;
+
+|EnrollStudentUseCase|
+:open;
+:newObject(Enrolment);
+:setDataFieldValues(studentId, courseModuleId);
+:createObject(Enrolment) <<Created>>;
+
+|Student|
+if (helpRequested?) then (yes)
+  :requestHelp;
+else (no)
+endif
+
+stop
+
+@enduml

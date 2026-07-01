@@ -45,6 +45,29 @@ Intermediate Metamodel — inspired by:
 
 
 /**
+* AGL Activity Diagram Parser (src/parser/activity-parser.ts)
+* ─────────────────────────────────────────────────────────
+* Behavioral (AGL) input, previously missing — companion file `<name>.activity.puml`,
+* auto-detected next to `<name>.puml` or passed via `-a/--activity`.
+*
+*   |ClassOrUseCaseName|         swimlane → ANode.refClass for following actions
+*   start / stop                 marks ANode.init and end of flow
+*   :open;                       AGL MAct keyword (no args)
+*   :newObject(Student);         AGL MAct keyword (arg = informational, e.g. entity name)
+*   :setDataFieldValues(a, b);   AGL MAct keyword (args = fieldNames)
+*   :createObject(Student) <<Created>>;   optional <<PostState>> override
+*   :Free text label;            generic Action node; moduleAction best-effort inferred
+*   if (cond?) then (yes) / else (no) / endif   → Decision node, branches → outClasses
+*   fork / fork again / end fork                → Fork/Join nodes, same branching rule
+*
+* Consecutive MAct lines under the same swimlane group into ONE AglActivityNode with
+* an ordered `moduleActions` list (the AGL SAA sequence: open → newObject →
+* setDataFieldValues → createObject). Parsed nodes are matched by `refClass` and
+* attached to the corresponding `DomainClass.activityNodes`, then surfaced as a
+* traceability comment on the generated use-case (see `use-case.hbs`).
+*
+* See examples/course-management.activity.puml for a worked example.
+*
 * PlantUML Parser
 * ───────────────
 * Parses PlantUML class diagrams into DomainMetamodel.

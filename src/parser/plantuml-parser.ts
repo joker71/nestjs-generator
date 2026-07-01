@@ -7,9 +7,10 @@ import type {
     Visibility
 } from "../model/dcsl-metamodel";
 import type {RbacRole} from "../model/rbac-metamodel";
+import {ActivityDiagramParser} from "./activity-parser";
 
 
-import {readFileSync} from 'node:fs';
+import {readFileSync, existsSync} from 'node:fs';
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -119,7 +120,7 @@ export class PlantUmlParser {
     private lines: string[] = [];
     private pos = 0;
 
-    parse(filePath: string): DomainMetamodel {
+    parse(filePath: string, activityFilePath?: string): DomainMetamodel {
         const src = readFileSync(filePath, 'utf-8');
         const appName = this.extractAppName(filePath);
         this.lines = src
@@ -153,7 +154,12 @@ export class PlantUmlParser {
                     rbacRoles.push({name: rc.name, permissions: rc.permissions});
                 });
 
-                boundedContexts.push({name: ctxName, classes: domainClasses, associations});
+                // Packages that only declare <<Role>> classes (e.g. an RBAC/AccessControl
+                // package) carry no domain classes of their own once roles are extracted —
+                // don't register them as a bounded context / NestJS module.
+                if (domainClasses.length > 0 || associations.length > 0) {
+                    boundedContexts.push({name: ctxName, classes: domainClasses, associations});
+                }
                 continue;
             }
 
@@ -214,6 +220,20 @@ export class PlantUmlParser {
 
         // Deduplicate and collect all permissions
         const allPermissions = [...new Set(rbacRoles.flatMap(r => r.permissions))];
+
+        // ── AGL behavioral input: companion activity diagram ──────────────────
+        // Explicit path wins; otherwise auto-detect `<name>.activity.puml` next to
+        // the class diagram (mirrors the `.ocl` companion-file convention).
+        const resolvedActivityPath = activityFilePath ?? filePath.replace(/\.puml?$/i, '.activity.puml');
+        if (existsSync(resolvedActivityPath)) {
+            const activityNodes = new ActivityDiagramParser().parse(resolvedActivityPath);
+            for (const ctx of boundedContexts) {
+                for (const cls of ctx.classes) {
+                    const matching = activityNodes.filter(n => n.refClass === cls.name);
+                    if (matching.length) cls.activityNodes = matching;
+                }
+            }
+        }
 
         return {
             appName,

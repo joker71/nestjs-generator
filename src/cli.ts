@@ -29,10 +29,13 @@ program
     .description('Parse PlantUML and generate NestJS DDD + RBAC code')
     .requiredOption('-i, --input <file>', 'Input PlantUML file (.puml)')
     .option('-o, --output <dir>', 'Output directory', './generated')
+    .option('-a, --activity <file>', 'Companion PlantUML activity diagram (AGL behavioral input). ' +
+        'Auto-detected as <input>.activity.puml if omitted.')
     .option('--dry-run', 'Print what would be generated without writing files')
-    .action(async (opts: { input: string; output: string; dryRun?: boolean }) => {
+    .action(async (opts: { input: string; output: string; activity?: string; dryRun?: boolean }) => {
         const inputPath = path.resolve(opts.input);
         const outputDir = path.resolve(opts.output);
+        const activityPath = opts.activity ? path.resolve(opts.activity) : undefined;
 
         if (!fs.existsSync(inputPath)) {
             console.error(chalk.red(`✗ Input file not found: ${inputPath}`));
@@ -47,8 +50,12 @@ program
             // Step 1 — Parse
             console.log(chalk.yellow('  [1/3] Parsing PlantUML...'));
             const parser = new PlantUmlParser();
-            let model: DomainMetamodel = parser.parse(inputPath);
-            console.log(chalk.green(`        ✓ ${model.boundedContexts.length} bounded context(s), ${model.rbac.roles.length} role(s)`));
+            let model: DomainMetamodel = parser.parse(inputPath, activityPath);
+            const activityNodeCount = model.boundedContexts
+                .flatMap(c => c.classes)
+                .reduce((n, c) => n + (c.activityNodes?.length ?? 0), 0);
+            console.log(chalk.green(`        ✓ ${model.boundedContexts.length} bounded context(s), ${model.rbac.roles.length} role(s)` +
+                (activityNodeCount ? `, ${activityNodeCount} AGL activity node(s)` : '')));
 
             // Step 2 — Transform
             console.log(chalk.yellow('  [2/3] Applying DDD + RBAC transformations...'));
@@ -85,15 +92,18 @@ program
     .command('inspect')
     .description('Parse PlantUML and print the intermediate metamodel as JSON')
     .requiredOption('-i, --input <file>', 'Input PlantUML file (.puml)')
+    .option('-a, --activity <file>', 'Companion PlantUML activity diagram (AGL behavioral input). ' +
+        'Auto-detected as <input>.activity.puml if omitted.')
     .option('--transform', 'Apply transformations before printing')
-    .action(async (opts: { input: string; transform?: boolean }) => {
+    .action(async (opts: { input: string; activity?: string; transform?: boolean }) => {
         const inputPath = path.resolve(opts.input);
+        const activityPath = opts.activity ? path.resolve(opts.activity) : undefined;
         if (!fs.existsSync(inputPath)) {
             console.error(chalk.red(`✗ File not found: ${inputPath}`));
             process.exit(1);
         }
         const parser = new PlantUmlParser();
-        let model: DomainMetamodel = parser.parse(inputPath);
+        let model: DomainMetamodel = parser.parse(inputPath, activityPath);
         if (opts.transform) {
             const transformer = new ModelTransformer();
             model = transformer.transform(model);
