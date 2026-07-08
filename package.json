@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "ts-node src/cli.ts",
     "generate": "ts-node src/cli.ts generate",
-    "dev": "ts-node src/cli.ts"
+    "dev": "ts-node src/cli.ts",
+    "test:ocl": "ts-node src/parser/ocl/demo.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
   "dependencies": {
     "chalk": "^5.6.2",
     "change-case": "^5.4.4",
+    "chevrotain": "^11.2.0",
     "commander": "^15.0.0",
     "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9"
