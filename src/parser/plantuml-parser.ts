@@ -150,15 +150,26 @@ export class PlantUmlParser {
                 // Separate RBAC roles from domain classes
                 const domainClasses = classes.filter(c => c.stereotype !== 'Role');
                 const roleClasses = classes.filter(c => c.stereotype === 'Role');
+                const roleNames = new Set(roleClasses.map(c => c.name));
                 roleClasses.forEach(rc => {
                     rbacRoles.push({name: rc.name, permissions: rc.permissions});
                 });
+                associations
+                    .filter(a => a.type === 'association' && roleNames.has(a.sourceClass) && roleNames.has(a.targetClass))
+                    .forEach(a => roleHierarchy.push({child: a.sourceClass, parent: a.targetClass}));
 
                 // Packages that only declare <<Role>> classes (e.g. an RBAC/AccessControl
                 // package) carry no domain classes of their own once roles are extracted —
                 // don't register them as a bounded context / NestJS module.
-                if (domainClasses.length > 0 || associations.length > 0) {
-                    boundedContexts.push({name: ctxName, classes: domainClasses, associations});
+                if (domainClasses.length > 0) {
+                    const domainClassNames = new Set(domainClasses.map(c => c.name));
+                    boundedContexts.push({
+                        name: ctxName,
+                        classes: domainClasses,
+                        associations: associations.filter(
+                            a => domainClassNames.has(a.sourceClass) || domainClassNames.has(a.targetClass)
+                        ),
+                    });
                 }
                 continue;
             }
@@ -369,9 +380,11 @@ export class PlantUmlParser {
                 continue;
             }
 
-            // Role permission lines: all-caps identifiers with optional underscores
-            if (stereotype === 'Role' && /^[A-Z][A-Z0-9_]+$/.test(line)) {
-                permissions.push(line);
+            // Role permission lines: all-caps identifiers, optionally followed by
+            // a target operation (`MANAGE_STUDENTS : Student.manage`).
+            const permissionLine = line.match(/^([A-Z][A-Z0-9_]+)\s*(?::.*)?$/);
+            if (stereotype === 'Role' && permissionLine) {
+                permissions.push(permissionLine[1]);
                 this.pos++;
                 continue;
             }
@@ -404,7 +417,7 @@ export class PlantUmlParser {
         // ClassName "mult" ARROW "mult" OtherClass : label
         // Patterns: --, -->, <--, .., ..>, *--, o--, --|>, ..|>
         const m = line.match(
-            /^(\w+)\s*(?:"([^"]*)")?\s*([<>|o*.]{2,})\s*(?:"([^"]*)")?\s*(\w+)\s*(?::\s*(.+))?$/
+            /^(\w+)\s*(?:"([^"]*)")?\s*([<>|o*.\-]{2,})\s*(?:"([^"]*)")?\s*(\w+)\s*(?::\s*(.+))?$/
         );
         if (!m) return null;
 

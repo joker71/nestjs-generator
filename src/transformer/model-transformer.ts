@@ -263,6 +263,13 @@ export class ModelTransformer {
 
     private standardCrudPermissions(className: string): string[] {
         const upper = constantCase(className);
-        return [`VIEW_${upper}S`, `CREATE_${upper}`, `UPDATE_${upper}`, `DELETE_${upper}`];
+        const plural = this.pluralPermissionToken(upper);
+        return [`VIEW_${plural}`, `CREATE_${upper}`, `UPDATE_${upper}`, `DELETE_${upper}`];
+    }
+
+    private pluralPermissionToken(token: string): string {
+        if (token.endsWith('Y')) return `${token.slice(0, -1)}IES`;
+        if (token.endsWith('S')) return `${token}ES`;
+        return `${token}S`;
     }
 }
