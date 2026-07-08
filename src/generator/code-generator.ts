@@ -78,13 +78,13 @@ export class CodeGenerator {
 
     generate(model: DomainMetamodel): void {
         console.log('model DomainMetamodel', model)
-        model.boundedContexts.forEach(ctx => this.generateContext(ctx));
+        model.boundedContexts.forEach(ctx => this.generateContext(ctx, model.rbac.allPermissions));
         this.generateRbac(model.rbac.roles, model.rbac.allPermissions);
     }
 
     // ─── Bounded Context ───────────────────────────────────────────────────────
 
-    private generateContext(ctx: BoundedContext): void {
+    private generateContext(ctx: BoundedContext, allPermissions: string[]): void {
         // Packages that resolved to zero domain classes (e.g. an RBAC/AccessControl
         // package containing only <<Role>> definitions) carry nothing to scaffold —
         // skip them instead of emitting an empty NestJS module.
@@ -95,7 +95,7 @@ export class CodeGenerator {
         for (const cls of ctx.classes) {
             switch (cls.stereotype) {
                 case 'AggregateRoot':
-                    this.generateAggregate(cls, ctx, ctxDir);
+                    this.generateAggregate(cls, ctx, ctxDir, allPermissions);
                     break;
                 case 'Entity':
                     this.generateEntity(cls, ctx, ctxDir);
@@ -124,8 +124,11 @@ export class CodeGenerator {
 
     // ─── AggregateRoot ─────────────────────────────────────────────────────────
 
-    private generateAggregate(cls: DomainClass, ctx: BoundedContext, ctxDir: string): void {
-        const context = classCtx(cls, ctx);
+    private generateAggregate(cls: DomainClass, ctx: BoundedContext, ctxDir: string, allPermissions: string[]): void {
+        const context = {
+            ...classCtx(cls, ctx),
+            ...this.resolveCrudPermissions(cls.name, allPermissions),
+        };
 
         // Domain entity file
         writeFile(
@@ -194,6 +197,51 @@ export class CodeGenerator {
 
         // Generate Create use-case for each aggregate root
         this.generateDefaultUseCase(cls, ctx, ctxDir);
+    }
+
+    private resolveCrudPermissions(className: string, allPermissions: string[]): Record<string, string> {
+        const upper = constantCase(className);
+        const plural = this.pluralPermissionToken(upper);
+        const permissions = new Set(allPermissions);
+
+        return {
+            viewPermission: this.firstExistingPermission(permissions, [
+                `VIEW_${plural}`,
+                `VIEW_${upper}`,
+                `VIEW_OWN_${plural}`,
+                `VIEW_OWN_${upper}`,
+                `MANAGE_${plural}`,
+                `MANAGE_${upper}`,
+            ], `VIEW_${plural}`),
+            createPermission: this.firstExistingPermission(permissions, [
+                `MANAGE_${plural}`,
+                `MANAGE_${upper}`,
+                `CREATE_${upper}`,
+                `CREATE_${plural}`,
+            ], `CREATE_${upper}`),
+            updatePermission: this.firstExistingPermission(permissions, [
+                `MANAGE_${plural}`,
+                `MANAGE_${upper}`,
+                `UPDATE_${upper}`,
+                `UPDATE_${plural}`,
+            ], `UPDATE_${upper}`),
+            deletePermission: this.firstExistingPermission(permissions, [
+                `DELETE_${plural}`,
+                `DELETE_${upper}`,
+                `MANAGE_${plural}`,
+                `MANAGE_${upper}`,
+            ], `DELETE_${upper}`),
+        };
+    }
+
+    private firstExistingPermission(permissions: Set<string>, candidates: string[], fallback: string): string {
+        return candidates.find(p => permissions.has(p)) ?? fallback;
+    }
+
+    private pluralPermissionToken(token: string): string {
+        if (token.endsWith('Y')) return `${token.slice(0, -1)}IES`;
+        if (token.endsWith('S')) return `${token}ES`;
+        return `${token}S`;
     }
 
     private generateEntity(cls: DomainClass, ctx: BoundedContext, ctxDir: string): void {

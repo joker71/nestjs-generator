@@ -183,37 +183,41 @@ package "SClassContext" <<BoundedContext>> {
 ' ─────────────────────────────────────────────────────────────────────────────
 package "RBAC" <<AccessControl>> {
 
-  ' RBAC₁ Senior role — inherits all EnrollmentOfficer permissions
+  ' RBAC0 — permission giờ có target + action, không còn là chuỗi trơ.
+  ' Cú pháp: PERMISSION_NAME : Resource.action [scope]
+  ' - Resource  = tên DClass trong .puml cùng file (Student, CourseModule, …)
+  ' - action    = create | read | update | delete | <tên tuỳ ý khớp UseCase>
+  ' - scope     = tuỳ chọn: all | own | <tag khác>
+  ' Dòng không có ":" vẫn hợp lệ (tương thích ngược với model cũ, permission "trơ")
   class Admin <<Role>> {
-    MANAGE_STUDENTS
-    ENROLL_STUDENTS
-    VIEW_STUDENTS
-    DELETE_STUDENTS
-    MANAGE_COURSES
-    VIEW_COURSES
-    DELETE_COURSES
-    MANAGE_SCLASSES
-    VIEW_REPORTS
-    MANAGE_ROLES
+    MANAGE_STUDENTS  : Student.manage
+    ENROLL_STUDENTS  : Enrolment.create
+    VIEW_STUDENTS    : Student.read [all]
+    DELETE_STUDENTS  : Student.delete
+    MANAGE_ROLES     : Role.manage
+    <<cardinality max=5>>              ' RBAC2: tối đa 5 user được gán role này
   }
 
-  ' RBAC₁ Junior role
   class EnrollmentOfficer <<Role>> {
-    ENROLL_STUDENTS
-    VIEW_STUDENTS
-    VIEW_COURSES
-    MANAGE_SCLASSES
+    ENROLL_STUDENTS : Enrolment.create
+    VIEW_STUDENTS   : Student.read [own]
+    VIEW_COURSES    : CourseModule.read
   }
 
-  ' RBAC₁ Junior role
   class StudentRole <<Role>> {
-    VIEW_OWN_PROFILE
-    VIEW_COURSES
-    VIEW_OWN_ENROLLMENTS
+    VIEW_OWN_PROFILE     : Student.read [own]
+    VIEW_OWN_ENROLLMENTS : Enrolment.read [own]
   }
 
-  ' RBAC₁ role hierarchy: Admin → EnrollmentOfficer (Admin inherits officer perms)
+  ' RBAC1 — role hierarchy (đã hỗ trợ sẵn, giữ nguyên)
   Admin --|> EnrollmentOfficer
+
+  ' RBAC2 — static / dynamic separation of duty, gắn nhãn stereotype lên association
+  Admin ..> Auditor          : <<SSD>>            ' không ai vừa Admin vừa Auditor
+  EnrollmentOfficer ..> StudentRole : <<DSD(maxActiveRoles=1)>>  ' 1 session chỉ active 1 trong 2 role
+
+  ' RBAC cross-domain (tech-report §10) — role-mapping liên miền, chặn leo thang đặc quyền
+  Finance.Auditor ..> EnrollmentContext.Admin : <<RoleMapping(deny)>>
 }
 
 @enduml

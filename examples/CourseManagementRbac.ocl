@@ -1,0 +1,86 @@
+-- ============================================================
+-- CourseManagement — RBAC invariants (OCL subset)
+-- Cấu trúc theo Sandhu et al. (1996): RBAC0 -> RBAC1 -> RBAC2
+-- Cách biểu diễn theo Ray, Li, France (2004): UML + OCL
+-- File đồng hành của CourseManagementRbac.puml
+-- ============================================================
+
+-- ===================== RBAC0: core =====================
+
+context Role
+  inv UniqueRoleName:
+    Role.allInstances()->isUnique(name)
+  inv PermissionsWellFormed:
+    self.permissions->forAll(p | p.target <> null and p.operation <> null)
+
+context User
+  inv OnlyAssignedRolesActivated:
+    self.sessions->forAll(s |
+      s.activeRoles->forAll(r | self.assignedRoles->includes(r)))
+
+context Session
+  inv SessionHasOwner:
+    self.user <> null
+
+-- ===================== RBAC1: role hierarchy =====================
+
+context Role
+  -- Quan hệ kế thừa role không được tạo chu trình
+  inv AcyclicHierarchy:
+    self.juniors->closure(j | j.juniors)->excludes(self)
+
+  -- Senior role thừa hưởng toàn bộ permission của junior (bao đóng bắc cầu)
+  inv SeniorInheritsJuniorPermissions:
+    self.juniors->closure(j | j.juniors)->forAll(j |
+      self.effectivePermissions->includesAll(j.permissions))
+
+  -- Generator hiện tại (extendsRole) chỉ hỗ trợ đơn kế thừa
+  inv SingleInheritanceInGenerator:
+    self.seniors->size() <= 1
+
+-- ===================== RBAC2: constraints =====================
+
+context Role
+  inv CardinalityRespected:
+    self.assignedUsers->size() <= self.maxCardinality
+
+  inv PrerequisiteRole:
+    self.prerequisites->notEmpty() implies
+      self.assignedUsers->forAll(u |
+        self.prerequisites->forAll(p | u.assignedRoles->includes(p)))
+
+context SSDRole
+  inv NoSharedUser:
+    let shared : Set(User) =
+      self.r1.assignedUsers->intersection(self.r2.assignedUsers)
+    in shared->isEmpty()
+
+context DSDRole
+  inv NotCoActivated:
+    User.allInstances()->forAll(u |
+      u.sessions->forAll(s |
+        not (s.activeRoles->includes(self.r1)
+             and s.activeRoles->includes(self.r2))))
+
+-- ===================== Cross-domain =====================
+
+context RoleMapping
+  inv AcyclicMapping:
+    self.target.mappings->closure(m | m.target.mappings)
+      ->collect(m | m.target)->excludes(self.source)
+
+  inv NoPrivilegeEscalation:
+    self.target.permissions->forAll(p |
+      self.source.allowedTargetPermissions->includes(p))
+
+context CrossDomainSSD
+  inv NoConflictAcrossDomains:
+    let allRoles : Set(Role) =
+      self.user.activeRoles->closure(r | r.juniors)->asSet()
+    in self.conflictPairs->forAll(p |
+         not (allRoles->includes(p.r1) and allRoles->includes(p.r2)))
+
+-- Qualified name xuyên miền: mọi role của miền Academic thuộc đúng miền
+context Domain
+  inv RolesBelongToDomain:
+    Academic::Role.allInstances()->forAll(r | r.domain.name = 'Academic')

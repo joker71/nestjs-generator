@@ -25,14 +25,14 @@ export class {{className}}Controller {
   ) {}
 
   @Get()
-  @RequirePermissions(Permission.VIEW_{{classNameUpper}}S)
+  @RequirePermissions(Permission.{{viewPermission}})
   async findAll() {
     // TODO: dispatch FindAll{{className}}Query
     return [];
   }
 
   @Get(':id')
-  @RequirePermissions(Permission.VIEW_{{classNameUpper}}S)
+  @RequirePermissions(Permission.{{viewPermission}})
   async findOne(@Param('id') id: string) {
     // TODO: dispatch FindOne{{className}}Query
     return { id };
@@ -40,14 +40,14 @@ export class {{className}}Controller {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @RequirePermissions(Permission.CREATE_{{classNameUpper}})
+  @RequirePermissions(Permission.{{createPermission}})
   async create(@Body() dto: Create{{className}}Dto) {
     // TODO: dispatch Create{{className}}Command
     return dto;
   }
 
   @Put(':id')
-  @RequirePermissions(Permission.UPDATE_{{classNameUpper}})
+  @RequirePermissions(Permission.{{updatePermission}})
   async update(@Param('id') id: string, @Body() dto: Update{{className}}Dto) {
     // TODO: dispatch Update{{className}}Command
     return { id, ...dto };
@@ -55,7 +55,7 @@ export class {{className}}Controller {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermissions(Permission.DELETE_{{classNameUpper}})
+  @RequirePermissions(Permission.{{deletePermission}})
   async remove(@Param('id') id: string) {
     // TODO: dispatch Delete{{className}}Command
   }
