@@ -111,7 +111,29 @@
           ],
           "isAbstract": false,
           "isMutable": true,
-          "permissions": []
+          "permissions": [],
+          "activityNodes": [
+            {
+              "label": "helpRequested?",
+              "refClass": "Student",
+              "serviceClass": "DataController",
+              "moduleActions": [],
+              "outClasses": [
+                "Student"
+              ],
+              "isStart": false,
+              "nodeType": "Decision"
+            },
+            {
+              "label": "requestHelp",
+              "refClass": "Student",
+              "serviceClass": "DataController",
+              "moduleActions": [],
+              "outClasses": [],
+              "isStart": false,
+              "nodeType": "Action"
+            }
+          ]
         },
         {
           "name": "CourseModule",
@@ -638,7 +660,53 @@
           "methods": [],
           "isAbstract": false,
           "isMutable": true,
-          "permissions": []
+          "permissions": [],
+          "activityNodes": [
+            {
+              "label": "RegisterStudentUseCase: open → newObject → setDataFieldValues → createObject",
+              "refClass": "RegisterStudentUseCase",
+              "serviceClass": "DataController",
+              "moduleActions": [
+                {
+                  "actName": "open",
+                  "postStates": []
+                },
+                {
+                  "actName": "newObject",
+                  "postStates": [
+                    "NewObject"
+                  ],
+                  "fieldNames": [
+                    "Student"
+                  ]
+                },
+                {
+                  "actName": "setDataFieldValues",
+                  "postStates": [
+                    "FieldsSet"
+                  ],
+                  "fieldNames": [
+                    "name",
+                    "email"
+                  ]
+                },
+                {
+                  "actName": "createObject",
+                  "postStates": [
+                    "Created"
+                  ],
+                  "fieldNames": [
+                    "Student"
+                  ]
+                }
+              ],
+              "outClasses": [
+                "EnrollStudentUseCase"
+              ],
+              "isStart": true,
+              "nodeType": "Action"
+            }
+          ]
         },
         {
           "name": "EnrollStudentUseCase",
@@ -665,10 +733,64 @@
           "methods": [],
           "isAbstract": false,
           "isMutable": true,
-          "permissions": []
+          "permissions": [],
+          "activityNodes": [
+            {
+              "label": "EnrollStudentUseCase: open → newObject → setDataFieldValues → createObject",
+              "refClass": "EnrollStudentUseCase",
+              "serviceClass": "DataController",
+              "moduleActions": [
+                {
+                  "actName": "open",
+                  "postStates": []
+                },
+                {
+                  "actName": "newObject",
+                  "postStates": [
+                    "NewObject"
+                  ],
+                  "fieldNames": [
+                    "Enrolment"
+                  ]
+                },
+                {
+                  "actName": "setDataFieldValues",
+                  "postStates": [
+                    "FieldsSet"
+                  ],
+                  "fieldNames": [
+                    "studentId",
+                    "courseModuleId"
+                  ]
+                },
+                {
+                  "actName": "createObject",
+                  "postStates": [
+                    "Created"
+                  ],
+                  "fieldNames": [
+                    "Enrolment"
+                  ]
+                }
+              ],
+              "outClasses": [
+                "Student"
+              ],
+              "isStart": false,
+              "nodeType": "Action"
+            }
+          ]
         }
       ],
       "associations": [
+        {
+          "sourceClass": "Student",
+          "targetClass": "Enrolment",
+          "type": "composition",
+          "sourceMultiplicity": "1",
+          "targetMultiplicity": "0..*",
+          "label": "enrolls-in"
+        },
         {
           "sourceClass": "Student",
           "targetClass": "StudentEnrolledEvent",
@@ -684,6 +806,14 @@
           "sourceMultiplicity": "1",
           "targetMultiplicity": "1",
           "label": "emits"
+        },
+        {
+          "sourceClass": "Enrolment",
+          "targetClass": "CourseModule",
+          "type": "association",
+          "sourceMultiplicity": "0..*",
+          "targetMultiplicity": "1",
+          "label": "belongs-to"
         }
       ]
     },
@@ -927,6 +1057,14 @@
       ],
       "associations": [
         {
+          "sourceClass": "SClass",
+          "targetClass": "SClassRegistration",
+          "type": "composition",
+          "sourceMultiplicity": "1",
+          "targetMultiplicity": "0..*",
+          "label": "contains"
+        },
+        {
           "sourceClass": "SClassRegistration",
           "targetClass": "RegisterIntoClassEvent",
           "type": "dependency",
@@ -935,11 +1073,6 @@
           "label": "emits"
         }
       ]
-    },
-    {
-      "name": "RBAC",
-      "classes": [],
-      "associations": []
     }
   ],
   "rbac": {
@@ -951,45 +1084,43 @@
           "ENROLL_STUDENTS",
           "VIEW_STUDENTS",
           "DELETE_STUDENTS",
-          "MANAGE_COURSES",
-          "VIEW_COURSES",
-          "DELETE_COURSES",
-          "MANAGE_SCLASSES",
-          "VIEW_REPORTS",
-          "MANAGE_ROLES"
-        ]
+          "MANAGE_ROLES",
+          "VIEW_COURSES"
+        ],
+        "extendsRole": "EnrollmentOfficer"
       },
       {
         "name": "EnrollmentOfficer",
         "permissions": [
           "ENROLL_STUDENTS",
           "VIEW_STUDENTS",
-          "VIEW_COURSES",
-          "MANAGE_SCLASSES"
+          "VIEW_COURSES"
         ]
       },
       {
         "name": "StudentRole",
         "permissions": [
           "VIEW_OWN_PROFILE",
-          "VIEW_COURSES",
           "VIEW_OWN_ENROLLMENTS"
         ]
       }
     ],
     "allPermissions": [
-      "DELETE_COURSES",
+      "CREATE_STUDENT",
+      "CREATE_S_CLASS",
+      "DELETE_STUDENT",
       "DELETE_STUDENTS",
+      "DELETE_S_CLASS",
       "ENROLL_STUDENTS",
-      "MANAGE_COURSES",
       "MANAGE_ROLES",
-      "MANAGE_SCLASSES",
       "MANAGE_STUDENTS",
+      "UPDATE_STUDENT",
+      "UPDATE_S_CLASS",
       "VIEW_COURSES",
       "VIEW_OWN_ENROLLMENTS",
       "VIEW_OWN_PROFILE",
-      "VIEW_REPORTS",
-      "VIEW_STUDENTS"
+      "VIEW_STUDENTS",
+      "VIEW_S_CLASSES"
     ]
   }
 }
