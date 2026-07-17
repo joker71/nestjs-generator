@@ -1,11 +1,4 @@
--- ============================================================
--- CourseManagement — RBAC invariants (OCL subset)
--- Cấu trúc theo Sandhu et al. (1996): RBAC0 -> RBAC1 -> RBAC2
--- Cách biểu diễn theo Ray, Li, France (2004): UML + OCL
--- File đồng hành của CourseManagementRbac.puml
--- ============================================================
 
--- ===================== RBAC0: core =====================
 
 context Role
   inv UniqueRoleName:
@@ -80,7 +73,6 @@ context CrossDomainSSD
     in self.conflictPairs->forAll(p |
          not (allRoles->includes(p.r1) and allRoles->includes(p.r2)))
 
--- Qualified name xuyên miền: mọi role của miền Academic thuộc đúng miền
 context Domain
   inv RolesBelongToDomain:
     Academic::Role.allInstances()->forAll(r | r.domain.name = 'Academic')

@@ -1,11 +1,4 @@
-/**
- * API công khai của OCL-subset parser:
- *
- *   const { ast, errors } = parseOcl(source, 'CourseManagementRbac.ocl');
- *   const diags = validateRbacOcl(ast, { knownContexts: [...] });
- *
- * Grammar chi tiết: xem README.md và ocl-cst-parser.ts.
- */
+
 import { OclLexer } from './ocl-tokens';
 import { oclParserInstance } from './ocl-cst-parser';
 import { oclAstBuilder } from './ocl-ast-builder';
@@ -80,33 +73,18 @@ export const OCL_COLLECTION_OPS: ReadonlySet<string> = new Set([
   'flatten', 'first', 'last', 'at', 'indexOf',
 ]);
 
-/**
- * Các context RBAC chuẩn theo metamodel của đề tài
- * (Sandhu 96: U/R/P/S; Ray-Li-France 04: SSD/DSD; tech-report: cross-domain).
- * Ngoài danh sách này, context có thể là domain class (Student, ...) —
- * truyền thêm qua options.knownContexts.
- */
+
 export const RBAC_CORE_CONTEXTS: ReadonlySet<string> = new Set([
   'Role', 'User', 'Permission', 'Session',
   'SSDRole', 'DSDRole', 'RoleMapping', 'CrossDomainSSD', 'Domain',
 ]);
 
 export interface RbacValidationOptions {
-  /**
-   * Danh sách tên context hợp lệ bổ sung (thường là domain class lấy từ
-   * DomainMetamodel sau khi parse PlantUML). Nếu bỏ trống, chỉ cảnh báo
-   * khi context không thuộc RBAC_CORE_CONTEXTS.
-   */
+ 
   knownContexts?: string[];
 }
 
-/**
- * Kiểm tra mức "well-formedness" (chưa phải type-check đầy đủ — phần đó
- * thuộc Stage 4 với USE/Eclipse OCL):
- *  - collection op sau `->` phải nằm trong subset hỗ trợ;
- *  - op dạng iterator phải có iterator, op thường không được có iterator;
- *  - cảnh báo context lạ (không phải RBAC core, không phải domain class đã khai).
- */
+
 export function validateRbacOcl(
   ast: OclFile,
   options: RbacValidationOptions = {},

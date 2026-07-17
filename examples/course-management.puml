@@ -1,25 +1,8 @@
-'
-' CourseManagement.puml
-' ─────────────────────
-' Example PlantUML model for ddd-codegen
-' Based on the CourseMan domain from:
-'   "AGL: Incorporating Behavioral Aspects into DDD" (Le & Dang)
-'   "DDD with DCSL" (Le, Dang & Nguyen)
-'
-' Demonstrates: AggregateRoot, Entity, ValueObject, DomainEvent,
-'               DomainService, Repository, UseCase, RBAC Roles
-'
+
 @startuml CourseManagement
 
-' ─────────────────────────────────────────────────────────────────────────────
-' BOUNDED CONTEXT: Enrollment
-' Corresponds to MOSA ModuleClass set for the enrollment activity (AGL paper §2)
-' ─────────────────────────────────────────────────────────────────────────────
 package "EnrollmentContext" <<BoundedContext>> {
 
-  ' ── Aggregate Root ──────────────────────────────────────────────────────
-  ' DCSL: DClass{mutable=true}, MOSA module owner
-  ' AGL: ANode{refCls=Student, init=true} — entry point of enrollment activity
   class Student <<AggregateRoot>> {
     - id: string
     - name: string
@@ -32,8 +15,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + changeName(name: string): void
   }
 
-  ' ── Entity ──────────────────────────────────────────────────────────────
-  ' DCSL: DClass{mutable=true} with cardinality constraints (min=1, max=8)
   class CourseModule <<Entity>> {
     - id: string
     - code: string
@@ -44,9 +25,7 @@ package "EnrollmentContext" <<BoundedContext>> {
     + updateDetails(name: string, credits: int): void
   }
 
-  ' ── Association Class / Entity ──────────────────────────────────────────
-  ' DCSL: DAssoc{ascType=Many2Many} realised as entity (Enrolment)
-  ' AGL MAct: {newObject → setDataFieldValues → createObject}
+  
   class Enrolment <<Entity>> {
     - id: string
     - studentId: string
@@ -60,8 +39,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + computeFinalGrade(): string
   }
 
-  ' ── Value Object ────────────────────────────────────────────────────────
-  ' DCSL: DClass{mutable=false, immutable} — identity by value
   class StudentName <<ValueObject>> {
     - firstName: string
     - lastName: string
@@ -70,7 +47,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + initials(): string
   }
 
-  ' ── Value Object ────────────────────────────────────────────────────────
   class Grade <<ValueObject>> {
     - internalMark: number
     - examMark: number
@@ -79,7 +55,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + isPassing(): boolean
   }
 
-  ' ── Domain Event ────────────────────────────────────────────────────────
   ' AGL: emitted as MAct post-state {Created} after createObject
   class StudentEnrolledEvent <<DomainEvent>> {
     + studentId: string
@@ -87,13 +62,11 @@ package "EnrollmentContext" <<BoundedContext>> {
     + enrolledAt: Date
   }
 
-  ' ── Domain Event ────────────────────────────────────────────────────────
   class HelpRequestedEvent <<DomainEvent>> {
     + studentId: string
     + requestedAt: Date
   }
 
-  ' ── Domain Service ──────────────────────────────────────────────────────
   ' DCSL: DOpt{type=Service} — logic spanning multiple aggregates
   ' AGL: ANode in decisional pattern (DHelpOrSClass in paper)
   class EnrollmentService <<DomainService>> {
@@ -102,7 +75,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + validateEnrollment(student: Student, courseModule: CourseModule): boolean
   }
 
-  ' ── Repository Interface ────────────────────────────────────────────────
   ' DCSL: DAssoc between domain model and infrastructure layer
   interface IStudentRepository <<Repository>> {
     + findById(id: string): Promise<Student>
@@ -120,8 +92,6 @@ package "EnrollmentContext" <<BoundedContext>> {
     + delete(id: string): Promise<void>
   }
 
-  ' ── Use Cases (AGL Structured Atomic Actions) ───────────────────────────
-  ' AGL: SAA sequences — open → newObject → setDataFieldValues → createObject
   class RegisterStudentUseCase <<UseCase>> {
     - name: string
     - email: string
@@ -132,18 +102,12 @@ package "EnrollmentContext" <<BoundedContext>> {
     - courseModuleId: string
   }
 
-  ' ── Associations (DCSL DAssoc) ──────────────────────────────────────────
   Student "1" *-- "0..*" Enrolment : enrolls-in
   Student ..> StudentEnrolledEvent : emits
   Student ..> HelpRequestedEvent : emits
   Enrolment "0..*" --> "1" CourseModule : belongs-to
 }
 
-' ─────────────────────────────────────────────────────────────────────────────
-' BOUNDED CONTEXT: SClass (Student Class Registration)
-' Separate bounded context — the "Register student into classes" activity node
-' (AGL paper Fig. 8 — sequential pattern)
-' ─────────────────────────────────────────────────────────────────────────────
 package "SClassContext" <<BoundedContext>> {
 
   class SClass <<AggregateRoot>> {
@@ -176,11 +140,7 @@ package "SClassContext" <<BoundedContext>> {
   SClassRegistration ..> RegisterIntoClassEvent : emits
 }
 
-' ─────────────────────────────────────────────────────────────────────────────
-' RBAC Model
-' Based on: Sandhu et al. (1996) RBAC₀/RBAC₁
-'           "Using UML to Visualize RBAC Constraints"
-' ─────────────────────────────────────────────────────────────────────────────
+
 package "RBAC" <<AccessControl>> {
 
   ' RBAC0 — permission giờ có target + action, không còn là chuỗi trơ.
@@ -198,6 +158,7 @@ package "RBAC" <<AccessControl>> {
     <<cardinality max=5>>              ' RBAC2: tối đa 5 user được gán role này
   }
 
+  ' - concrete synstax (textual + graphics)
   class EnrollmentOfficer <<Role>> {
     ENROLL_STUDENTS : Enrolment.create
     VIEW_STUDENTS   : Student.read [own]

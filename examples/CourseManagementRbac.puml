@@ -1,7 +1,0 @@
-role_body_line   := permission_line | plain_permission | cardinality_tag
-permission_line  := PERMISSION_NAME ":" resource "." action ["[" scope "]"]
-plain_permission := PERMISSION_NAME                      ' fallback, giữ hành vi cũ
-cardinality_tag  := "<<cardinality" ("min=" INT)? ("max=" INT)? ">>"
-
-constraint_edge  := role_a "..>" role_b ":" "<<" constraint_kind ">>"
-constraint_kind  := "SSD" | "DSD" "(" "maxActiveRoles=" INT ")" | "RoleMapping" "(" ("allow"|"deny") ")"

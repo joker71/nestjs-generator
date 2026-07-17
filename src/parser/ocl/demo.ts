@@ -1,7 +1,4 @@
-/**
- * Demo/smoke-test: npx ts-node src/parser/ocl/demo.ts
- * Parse examples/CourseManagementRbac.ocl + vài biểu thức biên.
- */
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseOcl, validateRbacOcl } from './index';
@@ -70,7 +67,6 @@ context Role
   inv B: Role.allInstances()->isUnique(r | r.name)
 `) && ok;
 
-// 3. Lỗi phải được bắt
 {
   const { errors } = parseOcl(`context Role inv X: self.->size()`, 'lỗi-cú-pháp');
   console.log(
