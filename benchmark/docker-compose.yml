@@ -1,0 +1,57 @@
+# Chạy từ thư mục benchmark/:
+#   1. Dựng 4 biến thể:  (từ repo root)
+#      node benchmark/scripts/make-variant.js --variant generated
+#      node benchmark/scripts/make-variant.js --variant off
+#      node benchmark/scripts/make-variant.js --variant manual
+#      node benchmark/scripts/make-variant.js --variant casbin
+#   2. cd benchmark && docker compose up --build -d app-generated app-off app-manual app-casbin
+#   3. Load test:
+#      - autocannon (host): node scripts/sweep-autocannon.mjs --targets generated=http://localhost:3001,off=http://localhost:3002,manual=http://localhost:3003,casbin=http://localhost:3004
+#      - k6 (container):    docker compose run --rm -e BASE_URL=http://app-generated:3000 -e ENDPOINT=/enrollment-context/students -e ROLES=Admin k6
+
+services:
+  app-generated:
+    build:
+      context: ./build/app-generated
+      dockerfile: ../../docker/Dockerfile.app
+    ports: ["3001:3000"]
+    cpus: 2
+    mem_limit: 1g
+
+  app-off:
+    build:
+      context: ./build/app-off
+      dockerfile: ../../docker/Dockerfile.app
+    ports: ["3002:3000"]
+    cpus: 2
+    mem_limit: 1g
+
+  app-manual:
+    build:
+      context: ./build/app-manual
+      dockerfile: ../../docker/Dockerfile.app
+    ports: ["3003:3000"]
+    cpus: 2
+    mem_limit: 1g
+
+  app-casbin:
+    build:
+      context: ./build/app-casbin
+      dockerfile: ../../docker/Dockerfile.app
+    ports: ["3004:3000"]
+    cpus: 2
+    mem_limit: 1g
+
+  k6:
+    image: grafana/k6:latest
+    profiles: ["loadtest"]
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results:/results
+    environment:
+      BASE_URL: ${BASE_URL:-http://app-generated:3000}
+      ENDPOINT: ${ENDPOINT:-/}
+      METHOD: ${METHOD:-GET}
+      ROLES: ${ROLES:-Admin}
+      P95_MS: ${P95_MS:-100}
+    command: run --summary-export /results/k6-summary.json /scripts/rbac-sweep.js

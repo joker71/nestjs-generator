@@ -1,0 +1,52 @@
+@startuml Synthetic-d4-a3
+package "PerfContext" <<BoundedContext>> {
+
+  class Order <<AggregateRoot>> {
+    +name: String
+    +amount: Int
+    +active: Boolean
+  }
+
+  class Invoice <<AggregateRoot>> {
+    +name: String
+    +amount: Int
+    +active: Boolean
+  }
+
+  class Product <<AggregateRoot>> {
+    +name: String
+    +amount: Int
+    +active: Boolean
+  }
+
+  class Level0 <<Role>> {
+    VIEW_ORDERS : Order.access
+    CREATE_ORDER : Order.access
+    UPDATE_ORDER : Order.access
+    DELETE_ORDER : Order.access
+    VIEW_INVOICES : Invoice.access
+    CREATE_INVOICE : Invoice.access
+    UPDATE_INVOICE : Invoice.access
+    DELETE_INVOICE : Invoice.access
+    VIEW_PRODUCTS : Product.access
+    CREATE_PRODUCT : Product.access
+    UPDATE_PRODUCT : Product.access
+    DELETE_PRODUCT : Product.access
+    EXTRA_PERM_0 : Order.extra
+    EXTRA_PERM_1 : Order.extra
+    EXTRA_PERM_2 : Order.extra
+    EXTRA_PERM_3 : Order.extra
+    EXTRA_PERM_4 : Order.extra
+  }
+
+  class Level1 <<Role>>
+  class Level2 <<Role>>
+  class Level3 <<Role>>
+  class Level4 <<Role>>
+
+  Level1 --|> Level0
+  Level2 --|> Level1
+  Level3 --|> Level2
+  Level4 --|> Level3
+}
+@enduml

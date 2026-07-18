@@ -18,9 +18,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role, ROLE_HIERARCHY } from './roles.enum';
-import { Permission } from './permissions.enum';
-import { ROLE_PERMISSION_MAP } from './role-permission.map';
+import { Role, ROLE_HIERARCHY } from '../rbac/roles.enum';
+import { Permission } from '../rbac/permissions.enum';
+import { ROLE_PERMISSION_MAP } from '../rbac/role-permission.map';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
