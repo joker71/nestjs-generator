@@ -8,6 +8,7 @@ import type {
 } from "../model/dcsl-metamodel";
 import type {RbacRole} from "../model/rbac-metamodel";
 import {ActivityDiagramParser} from "./activity-parser";
+import {parseOcl, validateRbacOcl} from "./ocl";
 
 
 import {readFileSync, existsSync} from 'node:fs';
@@ -120,7 +121,7 @@ export class PlantUmlParser {
     private lines: string[] = [];
     private pos = 0;
 
-    parse(filePath: string, activityFilePath?: string): DomainMetamodel {
+    parse(filePath: string, activityFilePath?: string, oclFilePath?: string): DomainMetamodel {
         const src = readFileSync(filePath, 'utf-8');
         const appName = this.extractAppName(filePath);
         this.lines = src
@@ -152,7 +153,7 @@ export class PlantUmlParser {
                 const roleClasses = classes.filter(c => c.stereotype === 'Role');
                 const roleNames = new Set(roleClasses.map(c => c.name));
                 roleClasses.forEach(rc => {
-                    rbacRoles.push({name: rc.name, permissions: rc.permissions});
+                    rbacRoles.push({name: rc.name, permissions: rc.permissions, domain: ctxName});
                 });
                 associations
                     .filter(a => a.type === 'association' && roleNames.has(a.sourceClass) && roleNames.has(a.targetClass))
@@ -186,7 +187,7 @@ export class PlantUmlParser {
                     cls.permissions = permissions;
                 }
                 if (cls.stereotype === 'Role') {
-                    rbacRoles.push({name: cls.name, permissions: cls.permissions});
+                    rbacRoles.push({name: cls.name, permissions: cls.permissions, domain: 'DefaultContext'});
                 } else {
                     orphanClasses.push(cls);
                 }
@@ -246,10 +247,30 @@ export class PlantUmlParser {
             }
         }
 
+        const resolvedOclPath = oclFilePath ?? filePath.replace(/\.puml?$/i, '.ocl');
+        const knownContexts = boundedContexts.flatMap(ctx => ctx.classes.map(cls => cls.name));
+        const ocl = existsSync(resolvedOclPath)
+            ? (() => {
+                const source = readFileSync(resolvedOclPath, 'utf-8');
+                const parsed = parseOcl(source, resolvedOclPath);
+                const diagnostics = [...parsed.errors];
+                if (parsed.ast) {
+                    diagnostics.push(...validateRbacOcl(parsed.ast, {knownContexts}));
+                }
+                return {
+                    filePath: resolvedOclPath,
+                    ast: parsed.ast,
+                    diagnostics,
+                    evaluations: [],
+                };
+            })()
+            : undefined;
+
         return {
             appName,
             boundedContexts,
             rbac: {roles: rbacRoles, allPermissions},
+            ocl,
         };
     }
 

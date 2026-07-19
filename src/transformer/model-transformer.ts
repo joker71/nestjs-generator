@@ -1,6 +1,7 @@
 import type {BoundedContext, DomainClass, DomainField, DomainMetamodel, DomainMethod} from "../model/dcsl-metamodel";
 import type {RbacRole} from "../model/rbac-metamodel";
 import {constantCase} from 'change-case';
+import {OclEvaluator} from "./ocl-evaluator";
 // ─── AGL Module Action keywords → moduleAction tag ───────────────────────────
 
 const MODULE_ACTION_KEYWORDS: Record<string, string> = {
@@ -109,6 +110,14 @@ export class ModelTransformer {
             this.transformContext(ctx, model)
         );
         model.rbac = this.transformRbac(model.rbac.roles, model.boundedContexts);
+        if (model.ocl?.ast) {
+            const evaluation = new OclEvaluator().evaluateModel(model, model.ocl.ast);
+            model.ocl = {
+                ...model.ocl,
+                diagnostics: [...model.ocl.diagnostics, ...evaluation.diagnostics],
+                evaluations: evaluation.evaluations,
+            };
+        }
         return model;
     }
 

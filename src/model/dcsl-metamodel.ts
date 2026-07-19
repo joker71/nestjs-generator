@@ -1,5 +1,6 @@
 import {AglActivityNode} from "./agl-metamodel";
 import {RbacModel, RbacRole} from "./rbac-metamodel";
+import type {OclDiagnostic, OclFile} from "../parser/ocl/ocl-ast";
 
 export type Visibility = 'private' | 'public' | 'protected';
 export type AssociationType = 'composition' | 'aggregation' | 'association' | 'dependency' | 'realization';
@@ -77,6 +78,25 @@ export interface DomainMetamodel {
     appName: string;
     boundedContexts: BoundedContext[];
     rbac: RbacModel;
+    ocl?: ModelOclState;
+}
+
+export type OclEvaluationStatus = 'passed' | 'failed' | 'unsupported' | 'error';
+
+export interface OclInvariantEvaluation {
+    contextName: string;
+    invariantName: string;
+    status: OclEvaluationStatus;
+    message: string;
+    evaluatedInstances: number;
+    failingInstances?: string[];
+}
+
+export interface ModelOclState {
+    filePath?: string;
+    ast?: OclFile;
+    diagnostics: OclDiagnostic[];
+    evaluations: OclInvariantEvaluation[];
 }
 
 //#region Generator context (passed to Handlebars templates)
