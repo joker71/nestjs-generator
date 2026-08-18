@@ -1,0 +1,94 @@
+% =============================================================
+%  LUẬN VĂN THẠC SĨ
+%  Đặc tả và tích hợp kiểm soát truy cập dựa trên vai trò
+%  trong Thiết kế hướng miền
+%  Học viên: Nguyễn Nhật Hoàng
+%  Biên dịch bằng XeLaTeX (khuyến nghị) hoặc LuaLaTeX
+% =============================================================
+\documentclass[13pt,a4paper,oneside]{report}
+
+\usepackage{fontspec}
+% Máy có Times New Roman thì dùng dòng dưới; nếu không, đổi sang "DejaVu Serif"
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{DejaVu Serif}}
+% Font mã nguồn: mặc định DejaVu Sans Mono (có sẵn mọi nơi).
+% Trên Windows có thể đổi thành: \setmonofont[Scale=0.85]{Consolas}
+\setmonofont[Scale=0.85]{DejaVu Sans Mono}
+
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\setotherlanguage{english}
+
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3.5cm,right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\bibliographystyle{apalike}   % APA-like; đổi sang plainnat/ieeetr nếu khoa yêu cầu
+\setcitestyle{authoryear,round}
+
+\linespread{1.3}
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{2pt}
+
+% ----- môi trường định nghĩa -----
+\theoremstyle{definition}
+\newtheorem{dinhnghia}{Định nghĩa}[chapter]
+\newtheorem{vidu}{Ví dụ}[chapter]
+\theoremstyle{remark}
+\newtheorem{nhanxet}{Nhận xét}[chapter]
+
+% ----- định dạng listing -----
+\definecolor{codebg}{HTML}{F5FAFA}
+\definecolor{codekw}{HTML}{028090}
+\definecolor{codecm}{HTML}{5A7278}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecm}\itshape,
+  frame=single, rulecolor=\color{codecm!40},
+  breaklines=true, showstringspaces=false,
+  captionpos=b, xleftmargin=0.5em, xrightmargin=0.5em,
+}
+\lstdefinelanguage{PlantUML}{
+  morekeywords={class,package,interface,note,end,start,stop,if,then,endif},
+  morecomment=[l]{'},
+  morestring=[b]",
+}
+\lstdefinelanguage{OCL}{
+  morekeywords={context,inv,pre,post,self,let,in,and,or,not,implies,forAll,exists,includes,excludes,isUnique,allInstances,closure},
+  morecomment=[l]{--},
+}
+
+\renewcommand{\bibname}{TÀI LIỆU THAM KHẢO}
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\listfigurename}{DANH MỤC HÌNH VẼ}
+\renewcommand{\listtablename}{DANH MỤC BẢNG}
+\renewcommand{\chaptername}{Chương}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+
+\begin{document}
+
+% \input{trangbia}     % trang bìa theo mẫu của Trường
+\tableofcontents
+\listoffigures
+\listoftables
+
+\input{chuong1}
+\input{chuong2}
+\input{chuong3}
+% \input{chuong4}
+% \input{ketluan}
+
+\bibliography{tailieu}
+
+\end{document}

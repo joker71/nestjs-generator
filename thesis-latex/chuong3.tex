@@ -1,0 +1,384 @@
+\chapter{PHƯƠNG PHÁP ĐỀ XUẤT}
+\label{ch:phuong-phap}
+
+Chương này trình bày đóng góp chính của luận văn. Mục~\ref{sec:tong-quan-pp} phác thảo toàn cảnh phương pháp ở mức khái niệm. Mục~\ref{sec:dsl-rbac} định nghĩa ngôn ngữ đặc tả chính sách RBAC theo ba thành phần đã nêu ở mục~\ref{subsec:ba-thanh-phan}. Năm mục tiếp theo (\ref{sec:buoc1}--\ref{sec:buoc5}) trình bày chi tiết từng bước của quy trình biến đổi. Mục~\ref{sec:tinh-chat} phân tích các tính chất mà phương pháp bảo đảm.
+
+\section{Tổng quan phương pháp}
+\label{sec:tong-quan-pp}
+
+\subsection{Nguyên tắc thiết kế}
+
+Phương pháp được xây dựng trên bốn nguyên tắc, mỗi nguyên tắc trả lời trực tiếp một yêu cầu đã nêu trong phát biểu bài toán ở mục~\ref{sec:muc-tieu}:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
+  \item \textbf{Một nguồn sự thật duy nhất.} Chính sách phân quyền chỉ được khai báo ở một nơi -- mô hình -- và mọi biểu hiện khác của nó (mã nguồn, cấu hình, tài liệu) đều được sinh ra từ đó. Nguyên tắc này loại trừ khả năng mô hình và mã phân kỳ.
+  \item \textbf{Phân quyền là khía cạnh hạng nhất.} Vai trò, quyền và ràng buộc là các phần tử của mô hình miền, có metamodel riêng và tham chiếu trực tiếp tới lớp miền, chứ không phải siêu dữ liệu phụ trợ gắn ngoài.
+  \item \textbf{Kiểm chứng trước khi sinh.} Mô hình phải vượt qua bước kiểm chứng bất biến thì mới được chuyển sang bước sinh mã. Một đặc tả sai không bao giờ tạo ra mã.
+  \item \textbf{Độc lập với công nghệ cài đặt.} Bốn bước đầu chỉ thao tác trên các khái niệm mô hình hóa; mọi tri thức về nền tảng đích được cô lập trong bộ mẫu sinh của bước cuối.
+\end{enumerate}
+
+\subsection{Kiến trúc tổng thể}
+
+Phương pháp có dạng một quy trình biến đổi một chiều gồm năm bước, chuyển đặc tả ở mức mô hình thành phần mềm thực thi. Hình~\ref{fig:tong-quan} minh họa đầu vào, các bước xử lý, dữ liệu trung gian và đầu ra.
+
+\begin{figure}[htbp]
+\centering
+% \includegraphics[width=\textwidth]{hinh/hinh-tong-quan-phuong-phap.pdf}
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3em}
+\textit{[Hình 3.1 -- Sơ đồ tổng quan phương pháp: ba tài liệu đặc tả đầu vào $\to$ năm bước xử lý $\to$ bốn sản phẩm dữ liệu trung gian $\to$ ứng dụng phân tầng kèm bộ thực thi phân quyền, kèm vòng phản hồi từ bước kiểm chứng về đặc tả]}
+\vspace{3em}}}
+\caption{Tổng quan phương pháp ở mức khái niệm}
+\label{fig:tong-quan}
+\end{figure}
+
+\textbf{Đầu vào} gồm ba tài liệu đặc tả bổ sung cho nhau:
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item \emph{Sơ đồ lớp} mô tả đồng thời cấu trúc miền (các lớp, thuộc tính, quan hệ) và chính sách phân quyền (vai trò, quyền, phân cấp, ràng buộc). Việc đặt hai khía cạnh trên cùng một sơ đồ là chủ ý: nó cho phép quyền tham chiếu trực tiếp tới lớp miền mà không cần cơ chế liên kết ngoài.
+  \item \emph{Sơ đồ hoạt động} mô tả hành vi của từng ca sử dụng dưới dạng chuỗi hành động, theo ngôn ngữ AGL.
+  \item \emph{Tệp ràng buộc} chứa các bất biến OCL -- phần ngữ nghĩa hình thức mà ký pháp sơ đồ không diễn đạt hết.
+\end{itemize}
+
+\textbf{Năm bước xử lý} lần lượt là: phân tích cú pháp, hợp nhất mô hình, làm giàu mô hình, kiểm chứng ràng buộc và sinh mã theo mẫu.
+
+\textbf{Bốn sản phẩm dữ liệu trung gian} nằm giữa các bước: cây cú pháp của từng nguồn, mô hình miền hợp nhất, mô hình đã làm giàu, và mô hình hợp lệ. Việc đặt tên và định nghĩa rõ từng sản phẩm trung gian không chỉ nhằm trình bày: nó cho phép mỗi bước được kiểm thử độc lập, và cho phép chèn thêm bước mới trong tương lai mà không phá vỡ các bước hiện có.
+
+\textbf{Vòng phản hồi} đi từ bước kiểm chứng ngược về đặc tả: khi phát hiện vi phạm, quy trình dừng lại và trả về chẩn đoán trỏ tới vị trí gây lỗi trong tài liệu đặc tả gốc, người thiết kế hiệu chỉnh rồi chạy lại. Đây là điểm khác biệt cơ bản so với các bộ sinh mã thông thường, vốn chỉ kiểm tra tính hợp lệ cú pháp chứ không kiểm chứng ngữ nghĩa của chính sách.
+
+\begin{nhanxet}
+Toàn bộ nội dung mục~\ref{sec:tong-quan-pp} không nhắc tới bất kỳ ngôn ngữ lập trình hay khung phần mềm nào. Đây là chủ ý: phương pháp được phát biểu ở mức khái niệm, và việc chọn một nền tảng đích cụ thể chỉ diễn ra ở bước~5 và ở phần thực nghiệm.
+\end{nhanxet}
+
+\section{Ngôn ngữ đặc tả chính sách RBAC}
+\label{sec:dsl-rbac}
+
+Mục này trình bày đóng góp thứ nhất của luận văn theo đúng ba thành phần của một ngôn ngữ: cú pháp trừu tượng, cú pháp cụ thể và ngữ nghĩa tĩnh.
+
+\subsection{Cú pháp trừu tượng: metamodel RBAC}
+\label{subsec:cu-phap-truu-tuong}
+
+Cú pháp trừu tượng được đặc tả bằng một metamodel gồm bảy khái niệm. Định nghĩa~\ref{dn:metamodel-rbac} phát biểu hình thức cấu trúc này.
+
+\begin{dinhnghia}[Metamodel chính sách RBAC]
+\label{dn:metamodel-rbac}
+Một chính sách phân quyền là bộ
+\[
+  \mathcal{P} = \langle\, \mathcal{R},\; \mathcal{Q},\; \mathit{grant},\; \mathit{extends},\; \mathcal{C}_{\mathit{ssd}},\; \mathcal{C}_{\mathit{dsd}},\; \mathit{card} \,\rangle
+\]
+trong đó:
+\begin{itemize}[leftmargin=1.4em,itemsep=1pt]
+  \item $\mathcal{R}$ là tập hữu hạn các \emph{vai trò}, mỗi vai trò có tên duy nhất;
+  \item $\mathcal{Q}$ là tập hữu hạn các \emph{quyền}; mỗi quyền $q \in \mathcal{Q}$ là bộ ba $\langle \mathit{res}(q),\, \mathit{act}(q),\, \mathit{scope}(q) \rangle$ với $\mathit{res}(q)$ là một lớp của mô hình miền, $\mathit{act}(q)$ là một thao tác và $\mathit{scope}(q)$ là phạm vi áp dụng;
+  \item $\mathit{grant} \subseteq \mathcal{R} \times \mathcal{Q}$ là quan hệ gán quyền cho vai trò (tương ứng quan hệ $PA$ trong Định nghĩa~\ref{dn:rbac0});
+  \item $\mathit{extends} \subseteq \mathcal{R} \times \mathcal{R}$ là quan hệ kế thừa vai trò (tương ứng $RH$ trong Định nghĩa~\ref{dn:rbac1});
+  \item $\mathcal{C}_{\mathit{ssd}},\, \mathcal{C}_{\mathit{dsd}} \subseteq \mathcal{R} \times \mathcal{R}$ là các tập cặp vai trò xung khắc tĩnh và động;
+  \item $\mathit{card} : \mathcal{R} \rightharpoonup \mathbb{N}$ là hàm bộ phận gán giới hạn số người giữ vai trò.
+\end{itemize}
+\end{dinhnghia}
+
+Điểm cần nhấn mạnh trong Định nghĩa~\ref{dn:metamodel-rbac} là thành phần $\mathit{res}(q)$: nó không phải một chuỗi ký tự tự do mà là \emph{tham chiếu tới một lớp của mô hình miền}. Chính thành phần này biến chính sách phân quyền từ một danh sách nhãn rời rạc thành một phần gắn kết của mô hình, và cũng chính nó đặt ra yêu cầu về tính gắn kết sẽ được kiểm tra ở bước~4.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.9\textwidth}{\centering\vspace{2.5em}
+\textit{[Hình 3.2 -- Metamodel chính sách RBAC dạng sơ đồ lớp: Role, Permission, Resource, Action, Scope, RoleHierarchy, SsdConstraint, DsdConstraint, Cardinality và quan hệ giữa chúng]}
+\vspace{2.5em}}}
+\caption{Metamodel chính sách RBAC (cú pháp trừu tượng)}
+\label{fig:metamodel-rbac}
+\end{figure}
+
+\subsection{Cú pháp cụ thể: profile trên sơ đồ lớp}
+\label{subsec:cu-phap-cu-the}
+
+Cú pháp cụ thể được định nghĩa dưới dạng một UML profile theo cơ chế stereotype đã trình bày ở mục~\ref{sec:uml-ocl}. Bảng~\ref{tab:anh-xa-cu-phap} là ánh xạ đầy đủ giữa khái niệm metamodel và ký pháp trên sơ đồ.
+
+\begin{table}[htbp]
+\centering
+\caption{Ánh xạ giữa cú pháp trừu tượng và cú pháp cụ thể}
+\label{tab:anh-xa-cu-phap}
+\small
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Khái niệm} & \textbf{Ký pháp trên sơ đồ} & \textbf{Ghi chú} \\
+\midrule
+Vai trò & \texttt{class R <<Role>>} & Tên lớp là tên vai trò \\
+Quyền & Trường trong thân lớp vai trò, dạng \texttt{TEN : TaiNguyen.thaoTac [phamVi]} & Xem văn phạm~\ref{lst:van-pham} \\
+Gán quyền & Quyền được khai báo bên trong lớp vai trò & Quan hệ $\mathit{grant}$ suy ra từ vị trí khai báo \\
+Kế thừa vai trò & \texttt{R1 -{}-|> R2} & $R_1$ kế thừa $R_2$ \\
+Tách nhiệm tĩnh & \texttt{R1 ..> R2 : <<SSD>>} & Cặp không đối xứng về ký pháp, đối xứng về ngữ nghĩa \\
+Tách nhiệm động & \texttt{R1 ..> R2 : <<DSD(maxActiveRoles=n)>>} & \\
+Giới hạn số lượng & \texttt{<<cardinality max=n>>} trong thân lớp vai trò & \\
+Nhóm chính sách & \texttt{package "X" <<AccessControl>>} & Tách chính sách khỏi phần cấu trúc trên cùng sơ đồ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Cấu trúc nội tại của biểu thức quyền được đặc tả bằng văn phạm sau:
+
+\begin{lstlisting}[caption={Văn phạm của biểu thức quyền (ký pháp EBNF)},label={lst:van-pham}]
+Permission  ::= Name ":" Resource "." Action [ "[" Scope "]" ]
+Name        ::= UPPER_IDENT
+Resource    ::= IDENT            (* ten mot lop mien tren cung so do *)
+Action      ::= "create" | "read" | "update" | "delete" | IDENT
+Scope       ::= "all" | "own" | IDENT
+\end{lstlisting}
+
+Ba quyết định thiết kế trong văn phạm này cần được lý giải:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+  \item \textbf{Vì sao tách \texttt{Resource} và \texttt{Action} thay vì dùng một tên quyền tự do?} Vì chỉ khi tách bạch, hệ thống mới kiểm tra được rằng tài nguyên được nhắc tới thực sự tồn tại trong mô hình miền, và mới ánh xạ được tự động từ quyền sang các điểm cuối thao tác trên tài nguyên đó ở bước sinh mã.
+  \item \textbf{Vì sao \texttt{Scope} là tùy chọn?} Để giữ ngưỡng sử dụng thấp: phần lớn quyền không cần phạm vi, và người thiết kế chỉ khai báo phạm vi khi nó thực sự tạo khác biệt (ví dụ phân biệt \emph{đọc mọi hồ sơ} với \emph{đọc hồ sơ của chính mình}).
+  \item \textbf{Vì sao \texttt{Action} cho phép cả định danh tự do lẫn bốn thao tác chuẩn?} Bốn thao tác CRUD phủ phần lớn nhu cầu và ánh xạ được tự động sang các thao tác mặc định sinh ra ở bước~3; định danh tự do dành cho các thao tác nghiệp vụ đặc thù, khi đó tên thao tác phải trùng với tên một phương thức hoặc ca sử dụng đã khai báo.
+\end{itemize}
+
+\begin{nhanxet}
+Việc chọn sơ đồ lớp làm nơi khai báo chính sách -- thay vì một tệp cấu hình riêng -- có một hệ quả đáng giá: chính sách phân quyền trở thành đối tượng có thể \emph{xem xét bằng mắt} cùng lúc với mô hình miền. Chuyên gia nghiệp vụ nhìn vào một sơ đồ duy nhất là biết vai trò nào chạm được vào khái niệm nghiệp vụ nào.
+\end{nhanxet}
+
+\subsection{Ngữ nghĩa tĩnh: tập bất biến}
+\label{subsec:ngu-nghia-tinh}
+
+Không phải mọi mô hình viết đúng cú pháp đều là một chính sách hợp lệ. Ngữ nghĩa tĩnh của ngôn ngữ được đặc tả bằng tập bất biến trong Bảng~\ref{tab:bat-bien}, phân thành ba lớp theo cấp của mô hình RBAC.
+
+\begin{table}[htbp]
+\centering
+\caption{Tập bất biến định nghĩa ngữ nghĩa tĩnh của ngôn ngữ}
+\label{tab:bat-bien}
+\small
+\begin{tabularx}{\textwidth}{@{}llXc@{}}
+\toprule
+\textbf{Mã} & \textbf{Lớp} & \textbf{Phát biểu} & \textbf{Thời điểm} \\
+\midrule
+I1 & RBAC$_0$ & Tên vai trò là duy nhất trong toàn chính sách & Thiết kế \\
+I2 & RBAC$_0$ & Mọi quyền đều có tài nguyên và thao tác xác định & Thiết kế \\
+I3 & RBAC$_0$ & Tài nguyên của mọi quyền phải là một lớp tồn tại trong mô hình miền & Thiết kế \\
+I4 & RBAC$_0$ & Thao tác tự do của quyền phải trùng tên một phương thức hoặc ca sử dụng đã khai báo & Thiết kế \\
+I5 & RBAC$_1$ & Đồ thị kế thừa vai trò không chứa chu trình & Thiết kế \\
+I6 & RBAC$_2$ & Hai vai trò xung khắc tĩnh không được gán cho cùng một người dùng & Thiết kế \& vận hành \\
+I7 & RBAC$_2$ & Hai vai trò xung khắc động không được kích hoạt trong cùng một phiên & Vận hành \\
+I8 & RBAC$_2$ & Số người giữ một vai trò không vượt quá giới hạn khai báo & Vận hành \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Mỗi bất biến được phát biểu hình thức bằng OCL. Listing~\ref{lst:bat-bien-ocl} trình bày ba bất biến tiêu biểu.
+
+\begin{lstlisting}[language=OCL,caption={Đặc tả OCL của các bất biến I1, I3 và I5},label={lst:bat-bien-ocl}]
+-- I1: ten vai tro la duy nhat
+context Role
+  inv UniqueRoleName:
+    Role.allInstances()->isUnique(name)
+
+-- I3: tai nguyen cua quyen phai la mot lop mien ton tai
+context Permission
+  inv ResourceExists:
+    DomainClass.allInstances()->exists(c | c.name = self.resource)
+
+-- I5: do thi ke thua vai tro khong co chu trinh
+context Role
+  inv AcyclicHierarchy:
+    not self.allParents()->includes(self)
+\end{lstlisting}
+
+Cột ``Thời điểm'' của Bảng~\ref{tab:bat-bien} thể hiện nguyên tắc đã nêu ở Nhận xét~\ref{nx:hai-thoi-diem}: bất biến nào quyết định được từ mô hình thì kiểm ở thời điểm thiết kế; bất biến phụ thuộc trạng thái vận hành (phiên làm việc, số người dùng thực tế) buộc phải sinh thành điểm kiểm tra trong mã. Riêng I6 xuất hiện ở cả hai cột: phép gán vai trò khai báo tĩnh trong đặc tả kiểm được lúc thiết kế, còn phép gán phát sinh lúc hệ thống đang chạy phải kiểm lúc vận hành.
+
+\section{Bước 1 -- Phân tích cú pháp}
+\label{sec:buoc1}
+
+\subsection{Mục tiêu và đầu ra}
+
+Bước~1 chuyển ba tài liệu đặc tả dạng văn bản thành cấu trúc dữ liệu mà máy xử lý được. Đầu ra là ba cây cú pháp độc lập, mỗi cây phản ánh trung thực nội dung của một nguồn, chưa có liên kết chéo giữa chúng.
+
+Nguyên tắc thiết kế của bước này là \emph{trung thực và không suy diễn}: bộ phân tích chỉ ghi nhận những gì được viết ra, không tự bổ sung phần tử nào. Mọi phép suy diễn được đẩy sang bước~3, nơi chúng được thực hiện tập trung và kiểm thử được.
+
+\subsection{Xử lý từng nguồn đặc tả}
+
+\textbf{Sơ đồ lớp.} Bộ phân tích duyệt tuần tự tài liệu, nhận diện lần lượt: khối gói kèm stereotype ngữ cảnh giới hạn; khai báo lớp kèm stereotype; các trường và phương thức trong thân lớp; và các quan hệ giữa lớp. Với lớp mang stereotype vai trò, các trường trong thân lớp được phân tích theo văn phạm~\ref{lst:van-pham} thành đối tượng quyền có cấu trúc thay vì chuỗi ký tự.
+
+\textbf{Sơ đồ hoạt động.} Mỗi làn bơi (\textit{swimlane}) xác định ca sử dụng hoặc lớp miền mà chuỗi hành động thuộc về; các hành động liên tiếp trong một làn được gom thành một nút hoạt động có thứ tự; cấu trúc rẽ nhánh và rẽ song song được ghi nhận thành nút quyết định tương ứng.
+
+\textbf{Tệp ràng buộc.} Mỗi bất biến được phân tích thành cây biểu thức có kiểu, gồm ngữ cảnh, tên bất biến và thân biểu thức.
+
+\subsection{Vị trí nguồn và chẩn đoán lỗi}
+
+Một quyết định thiết kế xuyên suốt: \emph{mỗi phần tử của cây cú pháp mang theo vị trí xuất xứ} -- tên tệp và số dòng nơi nó được khai báo. Chi phí là một trường dữ liệu bổ sung trên mỗi nút; lợi ích thì kéo dài tới tận cuối quy trình:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item Bước~4 báo vi phạm bất biến kèm đúng dòng gây lỗi thay vì chỉ nêu tên phần tử;
+  \item Bước~5 chèn được chú thích truy vết vào mã sinh ra, tạo nên quan hệ truy vết hai chiều;
+  \item Người thiết kế sửa lỗi trực tiếp trên tài liệu đặc tả mà không phải dò ngược.
+\end{itemize}
+
+Về phạm vi cú pháp, phương pháp chủ trương hỗ trợ một \emph{tập con được định nghĩa rõ} của ký pháp sơ đồ thay vì cố gắng phủ toàn bộ. Cấu trúc nằm ngoài tập con bị từ chối ngay với thông báo tường minh, thay vì bị bỏ qua âm thầm -- lựa chọn này ưu tiên tính tiên đoán được của công cụ hơn là sự dễ dãi.
+
+\section{Bước 2 -- Hợp nhất mô hình}
+\label{sec:buoc2}
+
+\subsection{Mô hình miền hợp nhất}
+
+Bước~2 gộp ba cây cú pháp thành một cấu trúc duy nhất. Định nghĩa~\ref{dn:mo-hinh-hop-nhat} phát biểu cấu trúc đó.
+
+\begin{dinhnghia}[Mô hình miền hợp nhất]
+\label{dn:mo-hinh-hop-nhat}
+Mô hình miền hợp nhất là bộ $\mathcal{M} = \langle\, \mathcal{B},\; \mathcal{P},\; \mathcal{A},\; \mathcal{I} \,\rangle$ trong đó $\mathcal{B}$ là tập các ngữ cảnh giới hạn (mỗi ngữ cảnh chứa các lớp miền cùng quan hệ giữa chúng -- khía cạnh cấu trúc), $\mathcal{P}$ là chính sách phân quyền theo Định nghĩa~\ref{dn:metamodel-rbac} -- khía cạnh phân quyền, $\mathcal{A}$ là tập các đồ thị hoạt động gắn với ca sử dụng -- khía cạnh hành vi, và $\mathcal{I}$ là tập bất biến đọc từ tệp ràng buộc.
+\end{dinhnghia}
+
+Ba khía cạnh nằm trên ba nhánh riêng của cùng một cây, phản ánh trực tiếp yêu cầu về tính trực giao: có thể lược bỏ nhánh $\mathcal{P}$ mà hai nhánh còn lại vẫn là một mô hình miền hoàn chỉnh và vẫn sinh mã được -- chỉ là mã không có phân quyền.
+
+\subsection{Tham chiếu chéo giữa các khía cạnh}
+
+Điều làm cho mô hình là \emph{hợp nhất} chứ không phải \emph{đặt cạnh nhau} là các tham chiếu chéo. Có ba loại:
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
+  \item \textbf{Quyền $\to$ lớp miền}: thành phần $\mathit{res}(q)$ của mỗi quyền được phân giải từ chuỗi tên thành tham chiếu trực tiếp tới đối tượng lớp miền trong nhánh $\mathcal{B}$.
+  \item \textbf{Hành vi $\to$ phương thức}: mỗi nút hoạt động được gắn vào ca sử dụng hoặc phương thức tương ứng trong nhánh $\mathcal{B}$.
+  \item \textbf{Bất biến $\to$ ngữ cảnh}: mỗi bất biến trong $\mathcal{I}$ được gắn vào lớp hoặc vai trò mà nó ràng buộc.
+\end{enumerate}
+
+Phép phân giải tham chiếu có thể thất bại -- ví dụ quyền trỏ tới một lớp không tồn tại. Khi đó bước~2 \emph{không} báo lỗi ngay mà ghi nhận tham chiếu ở trạng thái chưa phân giải; việc phán quyết dành cho bước~4, nơi bất biến I3 xử lý tình huống này. Lựa chọn này giữ cho mỗi bước có một trách nhiệm duy nhất: bước~2 chỉ hợp nhất, bước~4 chỉ phán quyết.
+
+\subsection{Bất biến sau hợp nhất}
+
+Kế thừa ba tiêu chí của UDML \citep{le2025udml}, mô hình sau bước~2 phải bảo đảm:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item \textbf{Trực giao}: mỗi chú giải phân quyền chỉ gắn vào loại phần tử hợp lệ (vai trò gắn ở mức lớp, không gắn ở mức thuộc tính);
+  \item \textbf{Gắn kết}: mọi tham chiếu chéo đều phân giải được (kiểm ở bước~4);
+  \item \textbf{Truy vết}: mọi phần tử giữ nguyên vị trí xuất xứ nhận được từ bước~1.
+\end{itemize}
+
+\section{Bước 3 -- Làm giàu mô hình}
+\label{sec:buoc3}
+
+Bước~3 bổ sung vào mô hình những phần tử suy diễn được theo quy ước, để người thiết kế chỉ phải khai báo phần mang tính đặc thù. Có bốn phép biến đổi, trong đó phép thứ tư là trọng tâm của luận văn.
+
+\subsection{Ba phép biến đổi trên khía cạnh cấu trúc}
+
+\textbf{(a) Chuẩn hóa lớp miền.} Mỗi lớp thực thể chưa có thuộc tính định danh được bổ sung một định danh; các thuộc tính vết thời gian (thời điểm tạo, thời điểm cập nhật) được thêm theo quy ước. Đây là những thuộc tính mà mọi thực thể đều cần nhưng không mang thông tin thiết kế, nên việc bắt người vẽ khai báo chúng chỉ làm sơ đồ rối thêm.
+
+\textbf{(b) Sinh thao tác mặc định.} Gốc tụ hợp không khai báo phương thức nào được xem là chỉ cần các thao tác cơ bản, và nhận đủ bộ thao tác tạo, đọc theo định danh, đọc danh sách, cập nhật và xóa. Nếu gốc tụ hợp đã khai báo phương thức, phép biến đổi này không can thiệp -- nguyên tắc ``khai báo tường minh thắng quy ước''.
+
+\textbf{(c) Sinh kho lưu trữ.} Mỗi gốc tụ hợp chưa có kho lưu trữ tương ứng được sinh một giao diện truy xuất, tuân theo khuôn mẫu repository của DDD.
+
+\subsection{Lan truyền quyền theo phân cấp vai trò}
+
+Phép biến đổi thứ tư hiện thực hóa ngữ nghĩa RBAC$_1$ (Định nghĩa~\ref{dn:rbac1}): tính tập quyền hiệu dụng $\mathit{perm}^{*}$ cho mọi vai trò. Bài toán không tầm thường vì phân cấp có thể nhiều tầng: quyền của một vai trò ở đáy phải ``chảy ngược'' lên tất cả các vai trò kế thừa nó, trực tiếp lẫn gián tiếp.
+
+Luận văn sử dụng thuật toán lặp tới điểm bất động, trình bày trong Listing~\ref{alg:lan-truyen}.
+
+\begin{lstlisting}[caption={Thuật toán lan truyền quyền theo phân cấp vai trò},label={alg:lan-truyen}]
+Vao : chinh sach P = <R, Q, grant, extends, ...>
+Ra  : anh xa perm* : R -> 2^Q  (tap quyen hieu dung)
+
+1  for each r in R do
+2      perm*[r] <- { q | (r, q) in grant }      // quyen khai bao truc tiep
+3  end for
+4  repeat
+5      changed <- false
+6      for each (r_con, r_cha) in extends do    // r_con ke thua r_cha
+7          truoc <- |perm*[r_con]|
+8          perm*[r_con] <- perm*[r_con] union perm*[r_cha]
+9          if |perm*[r_con]| > truoc then changed <- true end if
+10     end for
+11 until changed = false
+12 return perm*
+\end{lstlisting}
+
+\paragraph{Tính đúng đắn.}
+Thuật toán tính đúng $\mathit{perm}^{*}$ theo Định nghĩa~\ref{dn:rbac1}. Thật vậy, gọi $\mathit{perm}^{k}[r]$ là giá trị của $\mathit{perm}^{*}[r]$ sau vòng lặp thứ $k$. Bằng quy nạp theo $k$: sau vòng lặp thứ $k$, $\mathit{perm}^{k}[r]$ chứa mọi quyền của các vai trò cách $r$ không quá $k$ bước trên đồ thị kế thừa. Khi vòng lặp dừng ở bước $k^{*}$, không còn quyền mới được thêm, nghĩa là mọi vai trò đạt tới được từ $r$ theo quan hệ $\mathit{extends}$ đều đã đóng góp quyền của mình -- đúng bằng $\bigcup_{r' \preceq r}$ trong định nghĩa.
+
+\paragraph{Tính dừng.}
+Thuật toán luôn kết thúc. Xét đại lượng $\Phi = \sum_{r \in \mathcal{R}} |\mathit{perm}^{*}[r]|$. Mỗi vòng lặp hoặc làm $\Phi$ tăng thực sự (khi \texttt{changed} nhận giá trị đúng), hoặc kết thúc vòng lặp. Vì $\Phi$ bị chặn trên bởi $|\mathcal{R}| \times |\mathcal{Q}|$ -- một số hữu hạn -- nên số vòng lặp không vượt quá $|\mathcal{R}| \times |\mathcal{Q}|$. Đây là lập luận điểm bất động cổ điển trên một dàn hữu hạn với hàm đơn điệu tăng.
+
+\paragraph{Độ phức tạp.}
+Mỗi vòng lặp duyệt qua $|\mathit{extends}|$ cạnh, mỗi lần hợp tập tốn $O(|\mathcal{Q}|)$. Số vòng lặp bị chặn bởi chiều cao $h$ của đồ thị kế thừa cộng một. Vậy độ phức tạp là $O(h \cdot |\mathit{extends}| \cdot |\mathcal{Q}|)$. Trong thực tế $h$ rất nhỏ (thường không quá 3--4 tầng), nên chi phí không đáng kể.
+
+\paragraph{Điều kiện tiên quyết.}
+Lập luận về tính đúng đắn giả định đồ thị kế thừa không có chu trình. Nếu có chu trình, thuật toán vẫn dừng (lập luận về $\Phi$ không dùng tới giả thiết này) nhưng kết quả mất ý nghĩa: mọi vai trò trong chu trình sẽ có cùng tập quyền, tức phân cấp trở nên vô nghĩa. Vì vậy bất biến I5 phải được kiểm tra -- và trong quy trình, việc này diễn ra ở bước~4, ngay sau bước~3.
+
+\begin{vidu}
+\label{vd:lan-truyen}
+Xét ba vai trò với quan hệ $\mathit{Admin} \to \mathit{Officer} \to \mathit{Staff}$ và các quyền khai báo trực tiếp: $\mathit{Staff}$ có \texttt{VIEW\_STUDENTS}, $\mathit{Officer}$ có \texttt{ENROLL\_STUDENTS}, $\mathit{Admin}$ có \texttt{MANAGE\_STUDENTS}. Sau vòng lặp thứ nhất, $\mathit{Officer}$ nhận thêm \texttt{VIEW\_STUDENTS} và $\mathit{Admin}$ nhận thêm \texttt{ENROLL\_STUDENTS}. Sau vòng lặp thứ hai, $\mathit{Admin}$ nhận tiếp \texttt{VIEW\_STUDENTS} (đến từ $\mathit{Staff}$ qua $\mathit{Officer}$). Vòng lặp thứ ba không thêm gì và thuật toán dừng. Ví dụ này cho thấy vì sao một lượt duyệt là không đủ: quyền của $\mathit{Staff}$ cần hai vòng mới tới được $\mathit{Admin}$.
+\end{vidu}
+
+\section{Bước 4 -- Kiểm chứng ràng buộc}
+\label{sec:buoc4}
+
+\subsection{Quy trình đánh giá}
+
+Bước~4 đánh giá tập bất biến của Bảng~\ref{tab:bat-bien} trên mô hình đã làm giàu. Với mỗi bất biến thuộc nhóm ``thiết kế'', quy trình gồm ba việc: xác định tập đối tượng thuộc ngữ cảnh của bất biến; đánh giá biểu thức trên từng đối tượng; và với mỗi trường hợp sai, tạo một bản ghi chẩn đoán.
+
+Bản ghi chẩn đoán gồm bốn thành phần: mã và tên bất biến bị vi phạm; phần tử mô hình gây vi phạm; vị trí xuất xứ (tệp, dòng) lấy từ thông tin do bước~1 mang theo; và mô tả tình huống vi phạm ở dạng người đọc hiểu được. Thành phần thứ ba là điểm khiến chẩn đoán trở nên hữu dụng trong thực tế: người thiết kế được dẫn thẳng tới dòng cần sửa.
+
+\subsection{Ranh giới giữa hai thời điểm kiểm chứng}
+
+Không phải bất biến nào cũng quyết định được ở mức mô hình. Bảng~\ref{tab:bat-bien} phân định như sau:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+  \item \textbf{Kiểm ở thời điểm thiết kế} (I1--I5, và phần tĩnh của I6): các bất biến chỉ phụ thuộc vào bản thân đặc tả. Vi phạm ở nhóm này khiến quy trình dừng, không sinh mã. Đây là giá trị cốt lõi mà phương pháp mang lại so với cách cài đặt thủ công: một chính sách mâu thuẫn bị chặn từ khi còn là bản vẽ.
+  \item \textbf{Kiểm ở thời điểm vận hành} (I7, I8, và phần động của I6): các bất biến phụ thuộc trạng thái hệ thống lúc chạy -- phiên đăng nhập nào đang mở, bao nhiêu người dùng đang giữ vai trò. Với nhóm này, bước~4 không phán quyết mà \emph{ghi nhận yêu cầu kiểm tra}, để bước~5 sinh chúng thành các điểm kiểm soát trong mã.
+\end{itemize}
+
+\begin{nhanxet}
+Ranh giới này không phải là hạn chế kỹ thuật mà là hệ quả logic: một mệnh đề nói về trạng thái phiên làm việc đơn giản là không có giá trị chân lý khi hệ thống chưa chạy. Điều phương pháp bảo đảm được là: mọi bất biến \emph{quyết định được} ở mức mô hình đều đã được kiểm; và mọi bất biến \emph{không quyết định được} ở mức mô hình đều được sinh thành mã kiểm tra, chứ không bị bỏ quên.
+\end{nhanxet}
+
+\section{Bước 5 -- Sinh mã theo mẫu}
+\label{sec:buoc5}
+
+\subsection{Ánh xạ khái niệm sang sản phẩm mã}
+
+Bước~5 biến mô hình hợp lệ thành mã nguồn. Nguyên tắc là ánh xạ có hệ thống: mỗi khái niệm của mô hình tương ứng một loại sản phẩm mã, theo Bảng~\ref{tab:anh-xa-sinh-ma}.
+
+\begin{table}[htbp]
+\centering
+\caption{Ánh xạ khái niệm mô hình sang sản phẩm mã}
+\label{tab:anh-xa-sinh-ma}
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Khái niệm mô hình} & \textbf{Sản phẩm mã} \\
+\midrule
+Ngữ cảnh giới hạn & Một mô-đun ứng dụng phân tầng riêng \\
+Lớp thực thể, đối tượng giá trị, sự kiện miền & Lớp mã ở tầng miền \\
+Gốc tụ hợp & Lớp mã ở tầng miền, kèm các thao tác đã làm giàu ở bước~3 \\
+Kho lưu trữ & Giao diện ở tầng miền và hiện thực ở tầng hạ tầng \\
+Ca sử dụng (kèm chuỗi hành động AGL) & Đơn vị xử lý ở tầng ứng dụng, thân phương thức phác theo chuỗi hành động \\
+Tập vai trò & Kiểu liệt kê vai trò \\
+Tập quyền & Kiểu liệt kê quyền \\
+Quan hệ gán quyền (sau lan truyền) & Bảng gán quyền tra cứu lúc vận hành \\
+Phân cấp vai trò & Bảng phân cấp phục vụ mở rộng quyền lúc vận hành \\
+Bất biến nhóm vận hành (I6--I8) & Các phép kiểm tra bên trong điểm kiểm soát truy cập \\
+Quyền yêu cầu của một thao tác & Siêu dữ liệu gắn trên điểm cuối tương ứng \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Ba nguyên tắc của cơ chế sinh}
+
+\textbf{(a) Mẫu sinh không chứa logic.} Mọi tính toán -- bao đóng quyền, danh sách phụ thuộc, quy tắc đặt tên -- được thực hiện trong một bước chuẩn bị dữ liệu, tạo ra một cấu trúc phẳng chỉ gồm chuỗi và danh sách. Mẫu sinh chỉ điền dữ liệu vào khuôn. Lợi ích: logic sinh mã kiểm thử được bằng kiểm thử đơn vị thông thường, thay vì phải so khớp văn bản kết xuất; và mẫu đủ đơn giản để người không viết ra nó vẫn đọc hiểu.
+
+\textbf{(b) Chú thích truy vết.} Mỗi tệp sinh ra mang một khối chú thích ghi rõ nó được sinh từ phần tử mô hình nào và từ dòng nào của tài liệu đặc tả. Đây là chiều còn lại của quan hệ truy vết hai chiều: từ mô hình xuống mã đã có nhờ quy trình sinh, từ mã ngược lên mô hình có nhờ chú thích này.
+
+\textbf{(c) Sinh lại an toàn.} Bước sinh mã có tính idempotent: với cùng một đặc tả đầu vào, kết quả sinh ra là như nhau ở mọi lần chạy. Nhờ đó việc sinh lại sau khi sửa mô hình tạo ra một khác biệt \emph{đúng bằng} phần đã thay đổi, thuận lợi cho việc rà soát. Đối với phần mã do lập trình viên bổ sung, phương pháp dùng cơ chế vùng được bảo vệ: các đoạn nằm giữa cặp dấu hiệu quy ước được trích ra trước khi sinh và chèn lại sau khi sinh.
+
+\section{Các tính chất của phương pháp}
+\label{sec:tinh-chat}
+
+Mục này phân tích bốn tính chất mà phương pháp bảo đảm, tương ứng bốn yêu cầu ``sao cho'' trong phát biểu bài toán ở mục~\ref{sec:muc-tieu}.
+
+\paragraph{Tính trực giao.}
+Khía cạnh phân quyền nằm trên một nhánh riêng của mô hình hợp nhất và chỉ liên hệ với khía cạnh cấu trúc qua một loại tham chiếu duy nhất (quyền $\to$ lớp miền). Hệ quả: loại bỏ toàn bộ nhánh $\mathcal{P}$ khỏi mô hình vẫn cho một mô hình hợp lệ và sinh được mã -- chỉ khác là mã không có lớp phân quyền. Ở chiều ngược lại, thêm hoặc sửa chính sách không làm thay đổi mã sinh ra cho tầng miền. Tính chất này được kiểm chứng thực nghiệm ở Chương~4.
+
+\paragraph{Tính truy vết hai chiều.}
+Chiều xuôi được bảo đảm bởi bản thân quy trình sinh: mọi phần tử mã đều có nguồn gốc từ một phần tử mô hình. Chiều ngược được bảo đảm bởi chú thích truy vết, dựa trên thông tin vị trí nguồn mà bước~1 gắn vào và các bước sau bảo toàn.
+
+\paragraph{Tính tự động và lặp lại được.}
+Toàn bộ năm bước chạy trong một lượt, không cần can thiệp thủ công ở giữa. Kết hợp với tính idempotent của bước~5, quy trình có thể chạy lại bất kỳ lúc nào; mô hình luôn là nguồn sự thật duy nhất.
+
+\paragraph{Tính độc lập với công nghệ.}
+Bốn bước đầu chỉ thao tác trên các khái niệm mô hình hóa: lớp, quan hệ, vai trò, quyền, bất biến. Tri thức về nền tảng đích tập trung hoàn toàn trong bộ mẫu của bước~5. Do đó, việc chuyển sang một nền tảng đích khác về nguyên tắc chỉ đòi hỏi viết bộ mẫu mới, giữ nguyên bốn bước đầu và toàn bộ metamodel. Cần lưu ý đây là lập luận dựa trên thiết kế; việc kiểm chứng nó bằng thực nghiệm trên một nền tảng thứ hai thuộc hướng phát triển và được nêu lại trong phần phân tích nguy cơ ảnh hưởng tính hợp lệ ở Chương~4.
+
+\section{Tổng kết chương}
+\label{sec:tong-ket-c3}
+
+Chương này đã trình bày phương pháp đề xuất theo hai phần. Phần thứ nhất định nghĩa ngôn ngữ đặc tả chính sách RBAC với đầy đủ ba thành phần: cú pháp trừu tượng là metamodel bảy khái niệm (Định nghĩa~\ref{dn:metamodel-rbac}); cú pháp cụ thể là profile trên sơ đồ lớp với văn phạm quyền có cấu trúc; ngữ nghĩa tĩnh là tám bất biến phân theo ba cấp RBAC. Phần thứ hai trình bày quy trình năm bước, trong đó đáng chú ý là thuật toán lan truyền quyền với chứng minh tính đúng đắn và tính dừng (mục~\ref{sec:buoc3}), và nguyên tắc phân định hai thời điểm kiểm chứng (mục~\ref{sec:buoc4}). Chương tiếp theo trình bày công cụ hiện thực hóa phương pháp và kết quả đánh giá thực nghiệm.
