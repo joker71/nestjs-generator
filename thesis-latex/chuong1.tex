@@ -1,25 +1,29 @@
 \chapter{GIỚI THIỆU}
 \label{ch:gioi-thieu}
 
+Kiểm soát truy cập dựa trên vai trò là mô hình phân quyền phổ biến nhất trong phần mềm nghiệp vụ, nhưng trong thực hành nó hầu như luôn đứng ngoài mô hình miền: được mô tả bằng lời trong tài liệu thiết kế, cài đặt thủ công ở tầng hạ tầng, rải rác trong mã nguồn và không thể kiểm chứng trước khi viết mã. Luận văn lập luận rằng tình trạng đó không phải tất yếu. Nếu chính sách kiểm soát truy cập được đặc tả như một mối quan tâm hạng nhất ngay trong mô hình miền -- với siêu mô hình riêng, cú pháp cụ thể dạng văn bản trên biểu đồ lớp và ngữ nghĩa tĩnh bằng OCL -- thì nó có thể được kiểm chứng ở giai đoạn thiết kế và sinh tự động thành lớp thực thi, theo đúng tinh thần kỹ nghệ hướng mô hình mà mạch công trình DCSL, AGL, UDML đã đặt nền.
+
+Chương này xác lập cơ sở cho lập luận đó. Xuất phát từ một chính sách nhỏ trong hệ thống CourseMan, chương chỉ ra ba câu hỏi thực tiễn mà người thiết kế phải trả lời; phân tích vì sao ba câu hỏi ấy khó -- kiểm soát truy cập là mối quan tâm cắt ngang, lại mang ba đặc thù khiến nó khó mô-đun hóa hơn các mối quan tâm cắt ngang khác, và giữa mô hình với mã hiện không có cơ chế nào giữ được sự tương ứng; rồi chỉ ra khoảng trống mà các công trình liên quan để lại và phát biểu bài toán thành bốn câu hỏi nghiên cứu. Trên cơ sở đó, chương giới hạn phạm vi ở ba cấp RBAC$_0$--RBAC$_2$ trên một ca nghiên cứu điển hình, nêu hai đóng góp -- một phương pháp và một công cụ hiện thực hóa phương pháp đó -- và cách toàn bộ luận văn được tổ chức để trình bày và kiểm chứng chúng.
+
 \section{Đặt vấn đề}
 \label{sec:dat-van-de}
 
-Phần mềm nghiệp vụ hiện đại phải xử lý những quy tắc ngày càng phức tạp, thay đổi liên tục và gắn chặt với ngữ cảnh của tổ chức sử dụng nó. Trước thực tế đó, thiết kế hướng miền (Domain-Driven Design -- DDD) \cite{evans2003} đã nổi lên như một phương pháp phát triển phần mềm đặt mô hình miền (Domain Model -- DM) vào vị trí trung tâm: thay vì bắt đầu từ cơ sở dữ liệu hay giao diện, đội phát triển cùng chuyên gia miền xây dựng một mô hình khái niệm phản ánh trung thực ngôn ngữ và quy tắc nghiệp vụ, rồi tổ chức toàn bộ mã nguồn xoay quanh mô hình đó. Các khái niệm nền tảng của DDD -- ngôn ngữ chung (Ubiquitous Language -- UL), ngữ cảnh giới hạn (bounded context) và các khuôn mẫu chiến thuật như thực thể, đối tượng giá trị, gốc tụ hợp, kho lưu trữ, dịch vụ miền, sự kiện miền -- đã trở thành vốn từ chung của cộng đồng kỹ nghệ phần mềm \cite{vernon2013}.
+Phần mềm nghiệp vụ hiện đại phải xử lý những quy tắc ngày càng phức tạp, thay đổi liên tục và gắn chặt với ngữ cảnh của tổ chức sử dụng nó. Thiết kế hướng miền (Domain-Driven Design -- DDD) \cite{evans2003} đáp lại thực tế đó bằng cách đặt mô hình miền (Domain Model -- DM) vào vị trí trung tâm: thay vì bắt đầu từ cơ sở dữ liệu hay giao diện, đội phát triển cùng chuyên gia miền xây dựng một mô hình khái niệm phản ánh trung thực ngôn ngữ và quy tắc nghiệp vụ, rồi tổ chức toàn bộ mã nguồn xoay quanh mô hình đó. Các khái niệm nền tảng của DDD -- ngôn ngữ chung (Ubiquitous Language -- UL), ngữ cảnh giới hạn (bounded context) và các khuôn mẫu chiến thuật như thực thể, đối tượng giá trị, gốc tụ hợp, kho lưu trữ, dịch vụ miền, sự kiện miền -- đã trở thành vốn từ chung của cộng đồng kỹ nghệ phần mềm \cite{vernon2013}.
 
-Trong bối cảnh kỹ nghệ hướng mô hình (Model-Driven Engineering -- MDE), nhiều nghiên cứu đã sử dụng ngôn ngữ chuyên biệt miền (Domain-Specific Language -- DSL) để biểu diễn DM, qua đó liên kết chặt chẽ mô hình thiết kế với quá trình triển khai. Hướng nghiên cứu về ngôn ngữ chuyên biệt miền dựa vào chú thích (annotation-based DSL -- aDSL) đã hình thành một mạch công trình nhất quán: DCSL \cite{le2018dcsl,le2020} biểu diễn mối quan tâm cấu trúc của DM; AGL \cite{dang2023agl,le2023kse} biểu diễn mối quan tâm hành vi; UDML \cite{le2025udml,levanvinh2026} đề xuất cơ chế hợp nhất nhiều mối quan tâm vào một mô hình miền hợp nhất; và TMSA \cite{le2025tmsa} xác định kiến trúc đích dạng vi dịch vụ phân tầng theo ngữ cảnh giới hạn. Điểm chung của mạch nghiên cứu này là: DM được đặc tả bằng một ngôn ngữ hình thức ở mức mô hình, sau đó bản mẫu phần mềm được sinh tự động từ đặc tả đó bằng các bộ chuyển đổi mô hình.
+Trong kỹ nghệ hướng mô hình (Model-Driven Engineering -- MDE), một mạch nghiên cứu nhất quán đã hình thành quanh ý tưởng biểu diễn DM bằng ngôn ngữ chuyên biệt miền dựa vào chú thích (annotation-based Domain-Specific Language -- aDSL) rồi sinh phần mềm từ đặc tả đó: DCSL \cite{le2018dcsl,le2020} biểu diễn mối quan tâm cấu trúc của DM; AGL \cite{dang2023agl,le2023kse} bổ sung mối quan tâm hành vi; UDML \cite{le2025udml} đề xuất cơ chế hợp nhất nhiều mối quan tâm vào một DM duy nhất; và TMSA \cite{le2025tmsa} xác định kiến trúc đích dạng vi dịch vụ phân tầng theo ngữ cảnh giới hạn. Điểm chung của mạch nghiên cứu này là DM được đặc tả bằng một ngôn ngữ hình thức ở mức mô hình, sau đó bản mẫu phần mềm được sinh tự động bằng các bộ chuyển đổi mô hình.
 
-Luận văn này tiếp nối mạch nghiên cứu trên với một mối quan tâm đã được nhận diện nhưng chưa được khai thác đầy đủ ở mức công cụ: kiểm soát truy cập dựa trên vai trò (Role-Based Access Control -- RBAC) \cite{sandhu1996}.
+Luận văn tiếp nối mạch nghiên cứu trên với một mối quan tâm đã được nhận diện nhưng chưa được khai thác đầy đủ ở mức công cụ: kiểm soát truy cập dựa trên vai trò (Role-Based Access Control -- RBAC) \cite{sandhu1996}. Đây là mô hình kiểm soát truy cập phổ biến nhất trong phần mềm doanh nghiệp, có ngữ nghĩa hình thức đã được chuẩn hóa, nhưng trong thực hành lại hầu như luôn được cài đặt thủ công ở tầng hạ tầng, bên ngoài DM. Phần còn lại của mục này chỉ ra vì sao đó là một vấn đề đáng giải quyết.
 
-\subsection{Ví dụ thúc đẩy nghiên cứu: hệ thống CourseMan}
+\subsection{CourseMan: một chính sách ba vai trò đặt ra ba câu hỏi thực tiễn}
 \label{subsec:vi-du-thuc-day}
 
-Để làm rõ vấn đề nghiên cứu, luận văn sử dụng hệ thống quản lý đào tạo CourseMan làm ví dụ thúc đẩy xuyên suốt. Đây cũng là ca nghiên cứu điển hình đã được sử dụng trong mạch công trình DCSL, AGL và UDML \cite{le2018dcsl,dang2023agl,levanvinh2026}, nhờ đó kết quả của luận văn có thể đối sánh trực tiếp với các nghiên cứu trước.
+Để làm rõ vấn đề, luận văn dùng hệ thống quản lý đào tạo CourseMan làm ví dụ thúc đẩy xuyên suốt. Đây cũng là ca nghiên cứu điển hình của mạch công trình DCSL, AGL và UDML \cite{le2018dcsl,dang2023agl,le2025udml}, nhờ đó kết quả của luận văn đối sánh trực tiếp được với các nghiên cứu trước.
 
 CourseMan gồm hai ngữ cảnh giới hạn. Ngữ cảnh \emph{ghi danh} xoay quanh gốc tụ hợp \texttt{Student}, cùng các thực thể \texttt{CourseModule}, \texttt{Enrolment}, các đối tượng giá trị \texttt{StudentName}, \texttt{Grade}, dịch vụ miền \texttt{EnrollmentService} và hai ca sử dụng đăng ký sinh viên, ghi danh học phần. Ngữ cảnh \emph{lớp học} xoay quanh gốc tụ hợp \texttt{SClass} và thực thể \texttt{SClassRegistration}.
 
-Bên cạnh cấu trúc và hành vi, hệ thống có một chính sách kiểm soát truy cập với ba vai trò. Vai trò \texttt{StudentRole} chỉ được xem hồ sơ và bản ghi ghi danh của chính mình. Vai trò \texttt{EnrollmentOfficer} được tạo bản ghi ghi danh và xem hồ sơ sinh viên trong phạm vi phụ trách. Vai trò \texttt{Admin} kế thừa toàn bộ quyền của \texttt{EnrollmentOfficer} và được bổ sung quyền quản trị. Chính sách còn kèm ba loại ràng buộc: không ai đồng thời giữ vai trò \texttt{Admin} và vai trò kiểm toán (phân tách nhiệm vụ tĩnh); \texttt{EnrollmentOfficer} và \texttt{StudentRole} không được kích hoạt trong cùng một phiên làm việc (phân tách nhiệm vụ động); và số người giữ vai trò \texttt{Admin} không vượt quá một ngưỡng cho trước.
+Bên cạnh cấu trúc và hành vi, hệ thống có một chính sách kiểm soát truy cập với ba vai trò. \texttt{StudentRole} chỉ được xem hồ sơ và bản ghi ghi danh của chính mình. \texttt{EnrollmentOfficer} được tạo bản ghi ghi danh và xem hồ sơ sinh viên trong phạm vi phụ trách. \texttt{Admin} kế thừa toàn bộ quyền của \texttt{EnrollmentOfficer} và được bổ sung quyền quản trị. Chính sách còn kèm ba loại ràng buộc: không ai đồng thời giữ vai trò \texttt{Admin} và vai trò kiểm toán (phân tách nhiệm vụ tĩnh); \texttt{EnrollmentOfficer} và \texttt{StudentRole} không được kích hoạt trong cùng một phiên làm việc (phân tách nhiệm vụ động); và số người giữ vai trò \texttt{Admin} không vượt quá một ngưỡng cho trước (giới hạn số lượng).
 
-Ba câu hỏi thực tiễn nảy sinh từ ví dụ này, và cũng chính là ba vấn đề mà luận văn giải quyết:
+Một chính sách nhỏ như vậy đã đủ làm nảy sinh ba câu hỏi thực tiễn, và ba câu hỏi này cũng chính là ba vấn đề mà luận văn giải quyết:
 
 \begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
   \item Chính sách trên được \emph{đặc tả ở đâu} để chuyên gia miền đọc hiểu và phê duyệt được, đồng thời máy xử lý được?
@@ -27,65 +31,30 @@ Ba câu hỏi thực tiễn nảy sinh từ ví dụ này, và cũng chính là 
   \item Làm thế nào để mã nguồn thực thi \emph{đúng bằng} chính sách đã phê duyệt, và giữ được sự tương ứng đó qua các lần thay đổi?
 \end{enumerate}
 
-\subsection{Các thách thức nghiên cứu}
+\subsection{Ba thách thức nghiên cứu và khoảng trống trong các công trình liên quan}
 \label{subsec:thach-thuc}
 
-\subsubsection{Kiểm soát truy cập là một mối quan tâm cắt ngang}
+Ba câu hỏi trên khó trả lời vì ba lý do, mỗi lý do thuộc một tầng khác nhau: bản chất của mối quan tâm, đặc thù của RBAC, và phương pháp luận phát triển.
 
-RBAC \cite{sandhu1996} là mô hình kiểm soát truy cập được sử dụng rộng rãi nhất trong phần mềm doanh nghiệp: quyền không gán trực tiếp cho người dùng mà gán cho vai trò, người dùng nhận quyền thông qua quan hệ gán vai trò. Tuy phổ biến ở mức khái niệm, RBAC lại thường được cài đặt thủ công ở tầng hạ tầng: các đoạn mã kiểm tra quyền nằm rải rác trong bộ điều khiển, trong lớp dịch vụ, đôi khi cả trong DM.
+\paragraph{Thách thức thứ nhất: kiểm soát truy cập là mối quan tâm cắt ngang.}
+Trong RBAC \cite{sandhu1996}, quyền không gán trực tiếp cho người dùng mà gán cho vai trò; người dùng nhận quyền thông qua quan hệ gán vai trò. Tuy phổ biến ở mức khái niệm, RBAC lại thường được cài đặt thủ công ở tầng hạ tầng: các đoạn mã kiểm tra quyền nằm rải rác trong bộ điều khiển, trong lớp dịch vụ, đôi khi cả trong DM. Theo thuật ngữ của kỹ nghệ phần mềm, đây là một \emph{mối quan tâm cắt ngang} (cross-cutting concern) điển hình, biểu hiện qua hai triệu chứng: \emph{rải rác} (scattering) -- lô-gic của cùng một chính sách bị phân tán ra nhiều mô-đun, và \emph{trộn lẫn} (tangling) -- câu lệnh kiểm tra quyền xen kẽ với lô-gic nghiệp vụ trong cùng một đơn vị mã. Hệ quả không chỉ là chi phí bảo trì: một điểm kiểm tra bị bỏ sót trong hàng chục điểm rải rác đủ để tạo ra lỗ hổng an toàn, trong khi rà soát thủ công gần như không khả thi với hệ thống lớn.
 
-Theo thuật ngữ của kỹ nghệ phần mềm, RBAC là một \emph{mối quan tâm cắt ngang} (cross-cutting concern) điển hình, biểu hiện qua hai triệu chứng: \emph{rải rác} (scattering) -- lô-gic của cùng một chính sách bị phân tán ra nhiều mô-đun, và \emph{trộn lẫn} (tangling) -- câu lệnh kiểm tra quyền xen kẽ với lô-gic nghiệp vụ trong cùng một đơn vị mã. Hệ quả là chi phí bảo trì cao và rủi ro an toàn: một điểm kiểm tra bị bỏ sót trong hàng chục điểm rải rác đủ để tạo ra lỗ hổng, trong khi rà soát thủ công gần như không khả thi với hệ thống lớn.
+\paragraph{Thách thức thứ hai: ba đặc thù khiến RBAC khó mô-đun hóa hơn các mối quan tâm cắt ngang khác.}
+So với ghi nhật ký hay quản lý giao dịch, RBAC có ba đặc thù làm cho việc tách nó thành một mô-đun độc lập trở nên khó hơn đáng kể. \emph{Thứ nhất, tham chiếu chéo tới DM:} một quyền chỉ có nghĩa khi gắn với khái niệm nghiệp vụ cụ thể -- quyền xem hồ sơ sinh viên chỉ được hiểu đúng khi biết nó cho phép thao tác \emph{đọc} trên lớp miền \texttt{Student} với phạm vi xác định; nói cách khác, đặc tả kiểm soát truy cập buộc phải vượt ranh giới của chính nó để trỏ vào mối quan tâm cấu trúc. \emph{Thứ hai, tính không cục bộ do phân cấp vai trò:} trong RBAC$_1$, vai trò cấp cao kế thừa toàn bộ quyền của vai trò cấp thấp, nên tập quyền hiệu dụng của một vai trò không đọc được từ khai báo cục bộ mà phải tính qua bao đóng trên đồ thị kế thừa. \emph{Thứ ba, ràng buộc phạm vi toàn hệ thống:} phân tách nhiệm vụ tĩnh (SSD), phân tách nhiệm vụ động (DSD) và giới hạn số lượng đều được phát biểu trên toàn bộ tập vai trò và tập người dùng -- những mệnh đề mà một điểm kiểm tra cục bộ trong mã không thể bảo đảm.
 
-\subsubsection{Ba đặc thù khiến RBAC khó mô-đun hóa}
+\paragraph{Thách thức thứ ba: khoảng cách giữa mô hình và mã nguồn.}
+Trong thực tế, chính sách kiểm soát truy cập thường được mô tả trong tài liệu thiết kế bằng ngôn ngữ tự nhiên hoặc bảng biểu, rồi được lập trình viên hiện thực hóa thủ công. Không có cơ chế nào bảo đảm mã nguồn thực thi đúng chính sách đã phê duyệt, cũng không có cách nào kiểm chứng bản thân chính sách có nhất quán hay không trước khi viết mã. Sau vài chu kỳ phát triển, tài liệu thiết kế và mã nguồn phân kỳ; câu hỏi ``ai thực sự được làm gì trong hệ thống này'' chỉ trả lời được bằng cách đọc mã.
 
-So với các mối quan tâm cắt ngang quen thuộc như ghi nhật ký hay quản lý giao dịch, RBAC có ba đặc thù làm cho việc tách nó thành một mô-đun độc lập trở nên khó hơn đáng kể.
-
-\emph{Thứ nhất, tham chiếu chéo tới DM.} Một quyền chỉ có nghĩa khi gắn với khái niệm nghiệp vụ cụ thể: quyền xem hồ sơ sinh viên chỉ được hiểu đúng khi biết nó cho phép thao tác \emph{đọc} trên lớp miền \texttt{Student} với phạm vi xác định. Nói cách khác, đặc tả kiểm soát truy cập buộc phải vượt ranh giới của chính nó để trỏ vào mối quan tâm cấu trúc.
-
-\emph{Thứ hai, tính không cục bộ do phân cấp vai trò.} Trong mô hình RBAC$_1$, vai trò cấp cao kế thừa toàn bộ quyền của vai trò cấp thấp hơn. Do đó tập quyền hiệu dụng của một vai trò không đọc được từ khai báo cục bộ mà phải tính qua bao đóng trên đồ thị kế thừa.
-
-\emph{Thứ ba, ràng buộc phạm vi toàn hệ thống.} Các ràng buộc phân tách nhiệm vụ tĩnh (SSD), phân tách nhiệm vụ động (DSD) và giới hạn số lượng được phát biểu trên toàn bộ tập vai trò và tập người dùng. Đây là các mệnh đề mà một điểm kiểm tra cục bộ trong mã nguồn không thể bảo đảm.
-
-\subsubsection{Khoảng cách giữa mô hình và mã nguồn}
-
-Thách thức thứ ba mang tính phương pháp luận. Trong thực tế, chính sách kiểm soát truy cập thường được mô tả trong tài liệu thiết kế bằng ngôn ngữ tự nhiên hoặc bảng biểu, rồi được lập trình viên hiện thực hóa thủ công. Không có cơ chế nào bảo đảm mã nguồn thực thi đúng chính sách đã phê duyệt, cũng không có cách nào kiểm chứng bản thân chính sách có nhất quán hay không trước khi viết mã. Sau vài chu kỳ phát triển, tài liệu thiết kế và mã nguồn phân kỳ; câu hỏi ``ai thực sự được làm gì trong hệ thống này'' chỉ trả lời được bằng cách đọc mã.
-
-\subsubsection{Khoảng trống trong các nghiên cứu liên quan}
-
-Bài toán nêu trên đã được tiếp cận từ nhiều góc độ khác nhau. Về nền tảng lý thuyết, Sandhu và cộng sự \cite{sandhu1996} định nghĩa họ mô hình tham chiếu RBAC$_0$--RBAC$_3$; Ray và cộng sự \cite{ray2004} biểu diễn ràng buộc RBAC bằng UML kết hợp OCL và trực quan hóa vi phạm bằng mẫu biểu đồ đối tượng; Sohr và cộng sự \cite{sohr2008} phân tích và quản lý chính sách RBAC bằng OCL trên công cụ USE. Tuy vậy, các công trình này mô hình hóa RBAC như một hệ thống độc lập để phân tích, chưa gắn nó với DM của một ứng dụng cụ thể và không đề cập tới sinh mã.
+\paragraph{Khoảng trống trong các công trình liên quan.}
+Bài toán trên đã được tiếp cận từ nhiều góc độ. Về nền tảng lý thuyết, Sandhu và cộng sự \cite{sandhu1996} định nghĩa họ mô hình tham chiếu RBAC$_0$--RBAC$_3$; Ray và cộng sự \cite{ray2004} biểu diễn ràng buộc RBAC bằng UML kết hợp OCL và trực quan hóa vi phạm bằng mẫu biểu đồ đối tượng; Sohr và cộng sự \cite{sohr2008} phân tích và quản lý chính sách RBAC bằng OCL trên công cụ USE. Các công trình này mô hình hóa RBAC như một hệ thống độc lập để phân tích, chưa gắn nó với DM của một ứng dụng cụ thể và không đề cập tới sinh mã.
 
 Về an toàn hướng mô hình, SecureUML \cite{lodderstedt2002} và bản mở rộng \cite{basin2006} là những công trình mở đường: chính sách được mô hình hóa bằng một hồ sơ UML, sau đó hạ tầng kiểm soát truy cập được sinh tự động. Điểm khác biệt so với luận văn là SecureUML gắn với hệ công cụ mô hình hóa nặng của thời kỳ đó, không đặt trong khuôn khổ hợp nhất nhiều mối quan tâm của DDD, và không sinh ra bản mẫu phần mềm phân tầng theo ngữ cảnh giới hạn như kiến trúc hiện đại đòi hỏi.
 
-Về mạch aDSL cho DDD, DCSL \cite{le2018dcsl,le2020} và AGL \cite{dang2023agl} đã cho thấy hiệu quả của việc đặc tả DM bằng chú thích rồi sinh mã, nhưng phạm vi của hai ngôn ngữ này không bao gồm kiểm soát truy cập. Gần đây, UDML \cite{le2025udml,levanvinh2026} đề xuất cơ chế hợp nhất nhiều mối quan tâm vào một DM hợp nhất và giới thiệu RBACDom -- một DSL theo mối quan tâm bảo mật -- với siêu mô hình cú pháp trừu tượng, ngữ nghĩa hình thức và cơ chế chú thích ở mức nút hành vi. Công trình này giải quyết bài toán \emph{biểu diễn và hợp nhất} ở mức ngôn ngữ, nhưng chưa đi tới một quy trình công cụ hoàn chỉnh cho phép người thiết kế đặc tả chính sách bằng ký pháp sơ đồ dạng văn bản quen thuộc, kiểm chứng chính sách đó, và sinh trực tiếp bản mẫu phần mềm có lớp thực thi kiểm soát truy cập đầy đủ trên một nền tảng hiện đại.
+Về mạch aDSL cho DDD, DCSL \cite{le2018dcsl,le2020} và AGL \cite{dang2023agl} đã cho thấy hiệu quả của việc đặc tả DM bằng chú thích rồi sinh mã, nhưng phạm vi của hai ngôn ngữ này không bao gồm kiểm soát truy cập. Gần đây, UDML \cite{le2025udml} đề xuất cơ chế hợp nhất nhiều mối quan tâm vào một DM hợp nhất, trong đó kiểm soát truy cập được xác định là một mối quan tâm bảo mật có thể hợp nhất (gói \texttt{UDML.rbac}) trên nền mô hình RBAC liên hệ thống của Li và cộng sự \cite{li2022}. Công trình này giải quyết bài toán \emph{hợp nhất} ở mức ngôn ngữ và chỉ ra chỗ đứng của mối quan tâm bảo mật trong khung hợp nhất, nhưng chưa đặc tả mối quan tâm đó thành một DSL đầy đủ ngang hàng DCSL và AGL, và chưa đi tới một quy trình công cụ hoàn chỉnh cho phép người thiết kế đặc tả chính sách bằng ký pháp sơ đồ dạng văn bản quen thuộc, kiểm chứng chính sách đó, và sinh trực tiếp bản mẫu phần mềm có lớp thực thi kiểm soát truy cập trên một nền tảng hiện đại.
 
-Bảng~\ref{tab:khoang-trong} đối sánh các nhóm công trình theo năm tiêu chí phản ánh trực tiếp yêu cầu của bài toán.
+Tóm lại, chưa có công trình nào đồng thời đặc tả chính sách ở mức mô hình, liên kết đặc tả với DM, hỗ trợ phân cấp vai trò cùng các ràng buộc RBAC, có ngữ nghĩa hình thức kiểm chứng được, và sinh tự động bản mẫu phần mềm -- trong một quy trình công cụ hoàn chỉnh. Phép đối sánh có hệ thống theo năm tiêu chí này được trình bày ở mục~\ref{subsec:doi-sanh}, sau khi phương pháp đề xuất đã được giới thiệu đầy đủ để người đọc kiểm tra được từng tiêu chí.
 
-\begin{table}[htbp]
-\centering
-\caption{Đối sánh các nghiên cứu liên quan theo năm tiêu chí}
-\label{tab:khoang-trong}
-\small
-\begin{tabularx}{\textwidth}{@{}lXccccc@{}}
-\toprule
-\textbf{Công trình} & \textbf{Trọng tâm} & \textbf{(1)} & \textbf{(2)} & \textbf{(3)} & \textbf{(4)} & \textbf{(5)} \\
-\midrule
-Sandhu \cite{sandhu1996}       & Mô hình tham chiếu RBAC        & --  & --  & \checkmark & --  & --  \\
-Ray \cite{ray2004}             & Biểu diễn ràng buộc UML/OCL    & \checkmark & --  & \checkmark & \checkmark & --  \\
-Sohr \cite{sohr2008}           & Phân tích chính sách bằng OCL  & \checkmark & --  & \checkmark & \checkmark & --  \\
-Basin \cite{basin2006}         & An toàn hướng mô hình          & \checkmark & \checkmark & --  & --  & \checkmark \\
-DCSL \cite{le2018dcsl}         & aDSL mối quan tâm cấu trúc     & \checkmark & \checkmark & --  & \checkmark & \checkmark \\
-AGL \cite{dang2023agl}         & aDSL mối quan tâm hành vi      & \checkmark & \checkmark & --  & \checkmark & \checkmark \\
-UDML \cite{levanvinh2026}      & Hợp nhất mối quan tâm, RBACDom & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
-\textbf{Luận văn}              & Quy trình công cụ hoàn chỉnh   & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
-\bottomrule
-\end{tabularx}
-
-\vspace{4pt}
-\footnotesize
-(1) Đặc tả ở mức mô hình \quad (2) Liên kết với DM \quad (3) Phân cấp vai trò và ràng buộc RBAC \quad (4) Ngữ nghĩa hình thức kiểm chứng được \quad (5) Sinh tự động bản mẫu phần mềm
-\end{table}
-
-\subsection{Phát biểu bài toán nghiên cứu}
+\subsection{Phát biểu bài toán và bốn câu hỏi nghiên cứu}
 \label{subsec:phat-bieu-bai-toan}
 
 Từ các phân tích trên, bài toán nghiên cứu của luận văn được phát biểu như sau.
@@ -96,7 +65,9 @@ Từ các phân tích trên, bài toán nghiên cứu của luận văn được
   \item[Sao cho:] (a) kiểm soát truy cập là một mối quan tâm hạng nhất của DM, ngang hàng với cấu trúc và hành vi; (b) tính trực giao được bảo toàn, nghĩa là bổ sung hoặc loại bỏ mối quan tâm kiểm soát truy cập không làm thay đổi hai mối quan tâm còn lại; (c) tồn tại quan hệ truy vết hai chiều giữa mô hình và mã nguồn; (d) toàn bộ quá trình tự động và lặp lại được.
 \end{description}
 
-Bài toán này được cụ thể hóa thành bốn câu hỏi nghiên cứu, được trả lời bằng thực nghiệm trong Chương~\ref{ch:thuc-nghiem}:
+Bốn yêu cầu ``sao cho'' đối ứng trực tiếp với ba câu hỏi thực tiễn ở mục~\ref{subsec:vi-du-thuc-day}: yêu cầu (a) trả lời câu hỏi \emph{đặc tả ở đâu}; yêu cầu (b) và (c) trả lời câu hỏi \emph{mã có đúng với chính sách} và \emph{giữ được tương ứng qua thay đổi}; yêu cầu (d) là điều kiện để cả ba câu trả lời có giá trị trong thực hành.
+
+Bài toán được cụ thể hóa thành bốn câu hỏi nghiên cứu, được trả lời bằng thực nghiệm trong Chương~\ref{ch:thuc-nghiem}:
 
 \begin{description}[leftmargin=3.4em,style=sameline,itemsep=3pt]
   \item[RQ1.] \textbf{Tính khả thi}: phương pháp và công cụ đề xuất có sinh được bản mẫu phần mềm hoạt động đúng với đặc tả RBAC đầu vào hay không?
@@ -105,63 +76,63 @@ Bài toán này được cụ thể hóa thành bốn câu hỏi nghiên cứu, 
   \item[RQ4.] \textbf{Truy vết và mức dễ hiểu}: mã nguồn sinh ra có đối chiếu ngược được về phần tử mô hình tương ứng, và người đọc biểu đồ có nắm được chính sách kiểm soát truy cập của hệ thống hay không?
 \end{description}
 
-\section{Mục tiêu và phạm vi nghiên cứu}
+\section{Mục tiêu và phạm vi}
 \label{sec:muc-tieu}
 
-Luận văn nghiên cứu và đề xuất phương pháp đặc tả, tích hợp mối quan tâm kiểm soát truy cập dựa trên vai trò vào DM theo tinh thần DDD, đồng thời xây dựng bộ chuyển đổi mô hình sinh tự động bản mẫu phần mềm từ đặc tả đó. Để đạt mục tiêu tổng quát này, luận văn tập trung vào ba mục tiêu cụ thể sau.
+Mục tiêu tổng quát của luận văn là nghiên cứu và đề xuất phương pháp đặc tả, tích hợp mối quan tâm kiểm soát truy cập dựa trên vai trò vào DM theo tinh thần DDD, đồng thời xây dựng bộ chuyển đổi mô hình sinh tự động bản mẫu phần mềm từ đặc tả đó. Mục tiêu này được cụ thể hóa thành ba mục tiêu thành phần, tương ứng ba lớp của bài toán: ngôn ngữ, cơ chế tích hợp, và công cụ.
 
-\textbf{Mục tiêu 1.} Nghiên cứu và đề xuất một DSL cho phép đặc tả chính sách RBAC ngay trong DM, được định nghĩa đầy đủ qua ba thành phần: siêu mô hình cú pháp trừu tượng, cú pháp cụ thể dạng văn bản trên biểu đồ lớp, và ngữ nghĩa tĩnh biểu diễn bằng tập bất biến OCL.
+\textbf{Mục tiêu 1 -- Ngôn ngữ.} Đề xuất một DSL cho phép đặc tả chính sách RBAC ngay trong DM, được định nghĩa đầy đủ qua ba thành phần: siêu mô hình cú pháp trừu tượng, cú pháp cụ thể dạng văn bản trên biểu đồ lớp, và ngữ nghĩa tĩnh biểu diễn bằng tập bất biến OCL.
 
-\textbf{Mục tiêu 2.} Đề xuất cơ chế tích hợp mối quan tâm kiểm soát truy cập vào DM hợp nhất cùng với mối quan tâm cấu trúc và hành vi trên một cây cú pháp trừu tượng duy nhất, bao gồm quan hệ tham chiếu chéo giữa quyền và lớp miền, thuật toán lan truyền quyền theo phân cấp vai trò, và quy trình kiểm chứng bất biến ở giai đoạn thiết kế.
+\textbf{Mục tiêu 2 -- Cơ chế tích hợp.} Đề xuất cơ chế hợp nhất mối quan tâm kiểm soát truy cập vào DM cùng với mối quan tâm cấu trúc và hành vi trên một cây cú pháp trừu tượng duy nhất, bao gồm quan hệ tham chiếu chéo giữa quyền và lớp miền, thuật toán lan truyền quyền theo phân cấp vai trò, và quy trình kiểm chứng bất biến ở giai đoạn thiết kế.
 
-\textbf{Mục tiêu 3.} Nghiên cứu và xây dựng bộ chuyển đổi mô hình sinh tự động bản mẫu phần mềm phân tầng theo DDD kèm lớp thực thi kiểm soát truy cập, đồng thời bảo toàn quan hệ truy vết giữa mô hình và mã nguồn.
+\textbf{Mục tiêu 3 -- Công cụ.} Xây dựng bộ chuyển đổi mô hình sinh tự động bản mẫu phần mềm phân tầng theo DDD kèm lớp thực thi kiểm soát truy cập, bảo toàn quan hệ truy vết giữa mô hình và mã nguồn, và đánh giá phương pháp bằng thực nghiệm.
 
-\textbf{Phạm vi nghiên cứu} của luận văn được giới hạn như sau:
+\textbf{Phạm vi nghiên cứu} được giới hạn có chủ ý ở bốn điểm, để phần lõi của phương pháp được trình bày và kiểm chứng trọn vẹn:
 
 \begin{itemize}[leftmargin=1.6em,itemsep=2pt]
-  \item \emph{Về mô hình kiểm soát truy cập}: hỗ trợ đầy đủ RBAC$_0$ và RBAC$_1$ bao gồm lan truyền quyền qua phân cấp vai trò; RBAC$_2$ được hỗ trợ ở mức đặc tả và kiểm chứng thiết kế. RBAC$_3$ và kiểm soát truy cập liên miền giữa các ngữ cảnh giới hạn thuộc hướng phát triển.
+  \item \emph{Về mô hình kiểm soát truy cập}: hỗ trợ đầy đủ RBAC$_0$ và RBAC$_1$, bao gồm lan truyền quyền qua phân cấp vai trò; RBAC$_2$ được hỗ trợ ở mức đặc tả và kiểm chứng thiết kế. RBAC$_3$ và kiểm soát truy cập liên miền giữa các ngữ cảnh giới hạn thuộc hướng phát triển.
   \item \emph{Về ngôn ngữ ràng buộc}: hiện thực một tập con của OCL đủ để biểu diễn lớp bất biến RBAC$_0$--RBAC$_2$; các biểu thức ngoài tập con được xử lý bằng công cụ kiểm chứng hình thức bên ngoài.
   \item \emph{Về nền tảng đích}: phương pháp được trình bày ở mức khái niệm, độc lập với công nghệ cài đặt; một nền tảng cụ thể được lựa chọn để minh chứng tính khả thi trong phần thực nghiệm.
-  \item \emph{Về đánh giá}: sử dụng ca nghiên cứu CourseMan; các giới hạn về khả năng khái quát hóa được phân tích trong phần nguy cơ ảnh hưởng tính hợp lệ.
+  \item \emph{Về đánh giá}: sử dụng một ca nghiên cứu điển hình là CourseMan; các giới hạn về khả năng khái quát hóa được phân tích trong phần nguy cơ ảnh hưởng tính hợp lệ.
 \end{itemize}
 
 \section{Nội dung và phương pháp nghiên cứu}
 \label{sec:phuong-phap-nc}
 
-Để đạt được các mục tiêu đã nêu, luận văn thực hiện các nội dung nghiên cứu sau.
+Để đạt ba mục tiêu trên, luận văn thực hiện bốn nội dung nghiên cứu, mỗi nội dung là đầu vào của nội dung kế tiếp.
 
-\emph{Nội dung 1 -- Nghiên cứu tổng quan.} Khảo sát các công trình về DDD, DSL và aDSL, mô hình RBAC, các chuẩn mô hình hóa UML/OCL, cơ chế hợp nhất mối quan tâm và các kỹ thuật chuyển đổi mô hình; từ đó xác định khoảng trống nghiên cứu và định vị đóng góp của luận văn.
+\textbf{Nội dung 1 -- Nghiên cứu tổng quan.} Khảo sát các công trình về DDD, DSL và aDSL, họ mô hình RBAC, các chuẩn mô hình hóa UML/OCL, cơ chế hợp nhất mối quan tâm và các kỹ thuật chuyển đổi mô hình; từ đó xác định khoảng trống nghiên cứu và định vị đóng góp của luận văn.
 
-\emph{Nội dung 2 -- Thiết kế ngôn ngữ.} Định nghĩa DSL đặc tả chính sách RBAC theo quy trình thiết kế ngôn ngữ chuẩn: xây dựng siêu mô hình cú pháp trừu tượng, thiết kế cú pháp cụ thể dưới dạng hồ sơ trên biểu đồ lớp, và đặc tả ngữ nghĩa tĩnh bằng các quy tắc hợp lệ cấu trúc phát biểu bằng OCL.
+\textbf{Nội dung 2 -- Thiết kế ngôn ngữ.} Định nghĩa DSL đặc tả chính sách RBAC theo quy trình thiết kế ngôn ngữ chuẩn: xây dựng siêu mô hình cú pháp trừu tượng, thiết kế cú pháp cụ thể dưới dạng hồ sơ trên biểu đồ lớp, và đặc tả ngữ nghĩa tĩnh bằng các quy tắc hợp lệ cấu trúc phát biểu bằng OCL.
 
-\emph{Nội dung 3 -- Xây dựng bộ chuyển đổi mô hình.} Thiết kế quy trình biến đổi năm bước gồm phân tích cú pháp, hợp nhất mô hình, làm giàu mô hình, kiểm chứng ràng buộc và sinh mã theo mẫu; trong đó bước làm giàu chứa thuật toán lan truyền quyền được chứng minh về tính đúng đắn và tính dừng.
+\textbf{Nội dung 3 -- Xây dựng bộ chuyển đổi mô hình.} Thiết kế quy trình biến đổi năm bước gồm phân tích cú pháp, hợp nhất mô hình, làm giàu mô hình, kiểm chứng ràng buộc và sinh mã theo mẫu; trong đó bước làm giàu chứa thuật toán lan truyền quyền được chứng minh về tính đúng đắn và tính dừng.
 
-\emph{Nội dung 4 -- Hiện thực công cụ và thực nghiệm.} Xây dựng công cụ hỗ trợ, áp dụng trên ca nghiên cứu CourseMan, đánh giá theo bốn câu hỏi nghiên cứu và phân tích các nguy cơ ảnh hưởng tính hợp lệ của kết quả.
+\textbf{Nội dung 4 -- Hiện thực công cụ và thực nghiệm.} Xây dựng công cụ hỗ trợ, áp dụng trên ca nghiên cứu CourseMan, thiết kế bộ thí nghiệm đo lường theo bốn câu hỏi nghiên cứu, và phân tích các nguy cơ ảnh hưởng tính hợp lệ của kết quả.
 
-\emph{Phương pháp nghiên cứu} kết hợp nghiên cứu lý thuyết với nghiên cứu thực nghiệm. Về lý thuyết, luận văn sử dụng phương pháp siêu mô hình hóa để định nghĩa ngôn ngữ và sử dụng OCL để đặc tả ngữ nghĩa tĩnh. Về thực nghiệm, luận văn theo quy trình lặp lấy DM làm trung tâm: đặc tả, sinh mã, đánh giá và hiệu chỉnh, được kiểm chứng trên ca nghiên cứu điển hình.
+\textbf{Phương pháp nghiên cứu} kết hợp nghiên cứu lý thuyết với nghiên cứu thực nghiệm. Về lý thuyết, luận văn dùng phương pháp siêu mô hình hóa để định nghĩa ngôn ngữ, dùng OCL để đặc tả ngữ nghĩa tĩnh, và dùng lập luận toán học để chứng minh tính chất của thuật toán lan truyền quyền. Về thực nghiệm, luận văn theo quy trình lặp lấy DM làm trung tâm -- đặc tả, sinh mã, đo lường, hiệu chỉnh -- trên ca nghiên cứu điển hình, với nguyên tắc mỗi thí nghiệm chỉ thay đổi một biến so với lần chạy cơ sở để quy kết được kết quả cho nguyên nhân. Kết quả được báo cáo đúng như đo được, kể cả những chỗ cài đặt chưa phủ hết đặc tả của phương pháp.
 
-\section{Các đóng góp chính của luận văn}
+\section{Đóng góp chính}
 \label{sec:dong-gop}
 
 Luận văn có hai đóng góp chính, trong đó đóng góp thứ hai hiện thực hóa và kiểm chứng đóng góp thứ nhất.
 
 \begin{enumerate}[label=\roman*.,leftmargin=2em,itemsep=4pt]
-  \item \textbf{Đề xuất phương pháp đặc tả và tích hợp mối quan tâm kiểm soát truy cập dựa trên vai trò vào DM.} Luận văn phát triển một DSL cho phép đặc tả chính sách RBAC ngay trong DM, gồm ba thành phần: siêu mô hình cú pháp trừu tượng của chính sách; cú pháp cụ thể dạng văn bản trên biểu đồ lớp với các khuôn dập vai trò, cú pháp khai báo quyền có ngữ nghĩa và các khuôn dập ràng buộc; và ngữ nghĩa tĩnh gồm tập quy tắc hợp lệ cấu trúc phát biểu bằng OCL. Kèm theo ngôn ngữ là cơ chế tích hợp: DM hợp nhất ba mối quan tâm trên một cây cú pháp trừu tượng, quan hệ tham chiếu chéo giữa quyền và lớp miền, và thuật toán lan truyền quyền theo phân cấp vai trò bằng phép lặp điểm bất động.
+  \item \textbf{Phương pháp đặc tả và tích hợp mối quan tâm kiểm soát truy cập dựa trên vai trò vào DM.} Luận văn phát triển một DSL cho phép đặc tả chính sách RBAC ngay trong DM, gồm ba thành phần: siêu mô hình cú pháp trừu tượng của chính sách, trong đó mỗi quyền là bộ ba tài nguyên--thao tác--phạm vi với tài nguyên tham chiếu trực tiếp tới một lớp miền; cú pháp cụ thể dạng văn bản trên biểu đồ lớp với các khuôn dập vai trò, văn phạm khai báo quyền có cấu trúc và các khuôn dập ràng buộc; và ngữ nghĩa tĩnh gồm tám bất biến phát biểu bằng OCL, phân theo ba cấp RBAC$_0$--RBAC$_2$. Kèm theo ngôn ngữ là cơ chế tích hợp: DM hợp nhất ba mối quan tâm trên một cây cú pháp trừu tượng, quan hệ tham chiếu chéo giữa quyền và lớp miền, và thuật toán lan truyền quyền theo phân cấp vai trò bằng phép lặp điểm bất động, kèm chứng minh tính đúng đắn và tính dừng.
 
-  \item \textbf{Xây dựng công cụ hỗ trợ và đánh giá thực nghiệm.} Luận văn hiện thực hóa phương pháp thành công cụ \texttt{ddd-codegen} theo quy trình biến đổi năm bước, sinh tự động bản mẫu phần mềm phân tầng theo DDD kèm lớp thực thi kiểm soát truy cập; đồng thời đánh giá trên ca nghiên cứu CourseMan theo bốn câu hỏi nghiên cứu, kèm phân tích các nguy cơ ảnh hưởng tính hợp lệ của kết quả.
+  \item \textbf{Công cụ hỗ trợ và đánh giá thực nghiệm.} Luận văn hiện thực hóa phương pháp thành công cụ \texttt{ddd-codegen} theo quy trình biến đổi năm bước, sinh tự động bản mẫu phần mềm phân tầng theo DDD kèm lớp thực thi kiểm soát truy cập trên nền tảng NestJS. Công cụ được đánh giá trên ca nghiên cứu CourseMan qua sáu thí nghiệm trả lời bốn câu hỏi nghiên cứu, gồm cả kiểm thử đột biến trên đặc tả và phép so sánh từng byte để kiểm chứng tính trực giao; kết quả được báo cáo kèm phân tích nguyên nhân gốc của các hạn chế và bốn nhóm nguy cơ ảnh hưởng tính hợp lệ.
 \end{enumerate}
 
-Về quan hệ với các công trình của nhóm nghiên cứu, luận văn kế thừa trực tiếp cơ chế hợp nhất mối quan tâm của UDML và mối quan tâm bảo mật RBACDom \cite{le2025udml,levanvinh2026}. Điểm bổ sung của luận văn nằm ở ba khía cạnh: cú pháp cụ thể dạng văn bản cho phép đặc tả chính sách bằng công cụ biểu đồ phổ thông và quản lý bằng hệ thống quản lý phiên bản; quy trình kiểm chứng bất biến gắn liền với bước sinh mã, bảo đảm đặc tả sai không tạo ra mã; và bộ chuyển đổi mô hình hoàn chỉnh tới một nền tảng hiện đại kèm cơ chế truy vết hai chiều.
+Về quan hệ với các công trình của nhóm nghiên cứu, luận văn kế thừa trực tiếp cơ chế hợp nhất mối quan tâm của UDML \cite{le2025udml} và vị trí mà UDML dành cho mối quan tâm bảo mật trong khung hợp nhất đó. Điểm bổ sung nằm ở ba khía cạnh: cú pháp cụ thể dạng văn bản cho phép đặc tả chính sách bằng công cụ biểu đồ phổ thông và quản lý bằng hệ thống quản lý phiên bản; quy trình kiểm chứng bất biến gắn liền với bước sinh mã, theo nguyên tắc đặc tả sai không tạo ra mã; và bộ chuyển đổi mô hình hoàn chỉnh tới một nền tảng hiện đại kèm cơ chế truy vết hai chiều.
 
 \section{Cấu trúc luận văn}
 \label{sec:cau-truc}
 
-Phần còn lại của luận văn được tổ chức như sau.
+Phần còn lại của luận văn gồm ba chương và phần kết luận.
 
-\textbf{Chương~\ref{ch:co-so-ly-thuyet}} trình bày cơ sở lý thuyết và tổng quan tình hình nghiên cứu, gồm: nền tảng DDD, ngôn ngữ chuyên biệt miền và hướng tiếp cận aDSL, mô hình RBAC, các chuẩn mô hình hóa UML/OCL, cơ chế hợp nhất mối quan tâm và kiến trúc đích.
+\textbf{Chương~\ref{ch:co-so-ly-thuyet}} trình bày cơ sở lý thuyết và tổng quan tình hình nghiên cứu: nền tảng DDD và mô hình miền hướng thực thi; ngôn ngữ chuyên biệt miền và hướng tiếp cận aDSL; họ mô hình RBAC$_0$--RBAC$_2$ cùng các hướng biểu diễn kiểm soát truy cập trong mô hình miền; và các nền tảng kỹ thuật gồm chuẩn UML/OCL, cơ chế hợp nhất mối quan tâm, kỹ thuật chuyển đổi mô hình và kiến trúc đích.
 
-\textbf{Chương~\ref{ch:phuong-phap}} trình bày phương pháp đề xuất: DSL đặc tả chính sách RBAC với ba thành phần cú pháp trừu tượng, cú pháp cụ thể và ngữ nghĩa tĩnh; quy trình biến đổi năm bước từ đặc tả tới mã nguồn; và phân tích các tính chất của phương pháp.
+\textbf{Chương~\ref{ch:phuong-phap}} trình bày phương pháp đề xuất: bốn nguyên tắc thiết kế và kiến trúc quy trình năm bước; ngôn ngữ đặc tả chính sách RBAC với siêu mô hình, hồ sơ UML và tám bất biến; bốn bước đầu của quy trình đưa ba tài liệu đặc tả tới mô hình hợp lệ; bước sinh mã theo mẫu; bốn tính chất mà phương pháp bảo đảm; và đối sánh phương pháp với các công trình liên quan theo năm tiêu chí.
 
-\textbf{Chương~\ref{ch:thuc-nghiem}} trình bày công cụ hỗ trợ, ca nghiên cứu, thiết kế đánh giá, kết quả thực nghiệm theo bốn câu hỏi nghiên cứu, các nguy cơ ảnh hưởng tính hợp lệ và bàn luận.
+\textbf{Chương~\ref{ch:thuc-nghiem}} trình bày công cụ \texttt{ddd-codegen}, ca nghiên cứu CourseMan và thiết kế bộ thí nghiệm; kết quả thực nghiệm theo bốn câu hỏi nghiên cứu; và phần bàn luận về nguyên nhân gốc của các hạn chế cùng nguy cơ ảnh hưởng tính hợp lệ.
 
 Phần \textbf{Kết luận} tổng kết đóng góp, nêu hạn chế và hướng nghiên cứu tiếp theo.

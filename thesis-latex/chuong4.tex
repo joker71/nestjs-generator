@@ -1,33 +1,543 @@
 \chapter{THỰC NGHIỆM VÀ ĐÁNH GIÁ}
 \label{ch:thuc-nghiem}
 
-\section{Giới thiệu}
-\label{sec:gioi-thieu-c4}
-% Nêu mục đích chương: hiện thực hóa phương pháp thành công cụ và đánh giá theo bốn câu hỏi nghiên cứu.
+Chương~\ref{ch:phuong-phap} đã phát biểu phương pháp ở mức khái niệm và lập luận về các tính chất của nó; chương này đặt phương pháp trước dữ liệu. Câu hỏi không còn là ``phương pháp có hợp lý không'' -- điều đã được lập luận -- mà là ``một cài đặt thực của nó làm được tới đâu'', đo theo bốn câu hỏi nghiên cứu RQ1--RQ4 ở mục~\ref{subsec:phat-bieu-bai-toan}. Để trả lời, luận văn hiện thực hóa phương pháp thành công cụ \texttt{ddd-codegen} với hơn bốn nghìn dòng mã, áp dụng lên ca nghiên cứu CourseMan, và thiết kế sáu thí nghiệm mà mỗi thí nghiệm chỉ thay đổi đúng một biến so với lần chạy cơ sở -- trong đó có kiểm thử đột biến trên đặc tả và phép so sánh từng byte để kiểm chứng tính trực giao. Mọi con số trong chương đọc trực tiếp từ kết xuất của công cụ hoặc từ các tệp nó sinh ra, nên lặp lại được.
 
-\section{Công cụ hỗ trợ}
+Kết quả không đồng đều, và chương trình bày đúng như vậy. Quy trình chạy trọn vẹn không cần can thiệp; tính trực giao và tính idempotent được xác nhận ở mức mạnh nhất có thể đo; một thay đổi chính sách chỉ chạm tới ba tệp xác định trước. Nhưng mã sinh ra chưa biên dịch sạch, mới một phần tư đột biến bị phát hiện, và vi phạm bất biến chưa chặn được bước sinh mã. Điều đáng giá hơn bản thân các con số là phân tích đi kèm: phần lớn hạn chế quy về một nguyên nhân gốc duy nhất -- bộ phân tích đã cài đặt chấp nhận một tập con hẹp hơn cú pháp cụ thể đã đặc tả -- và sáu trên tám hạn chế thuộc về cài đặt chứ không chạm tới thiết kế của phương pháp.
+
+Nguyên tắc trình bày xuyên suốt chương là phân định rạch ròi giữa \emph{phương pháp} và \emph{mức độ hiện thực hóa của công cụ}, kể cả ở những chỗ cài đặt chưa phủ hết đặc tả: một khoảng cách được đo và giải thích thì hữu ích cho nghiên cứu tiếp theo, còn một khoảng cách bị che đi thì không.
+
+\section{Công cụ ddd-codegen: kiến trúc, ánh xạ năm bước và quy mô cài đặt}
 \label{sec:cong-cu}
-% Kiến trúc công cụ ddd-codegen; ánh xạ năm bước phương pháp sang thành phần công cụ; quy mô cài đặt.
 
-\section{Ca nghiên cứu CourseMan}
+\subsection{Giao diện dòng lệnh nhận trực tiếp ba tài liệu đặc tả}
+
+Công cụ mang tên \texttt{ddd-codegen}, viết bằng TypeScript, chạy trên môi trường Node.js và được đóng gói dưới dạng giao diện dòng lệnh. Công cụ cung cấp hai lệnh:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item \texttt{generate} chạy trọn năm bước và ghi mã nguồn ra thư mục đích;
+  \item \texttt{inspect} chạy tới bước~3 rồi in mô hình trung gian dưới dạng JSON, phục vụ việc quan sát và kiểm thử từng bước một cách độc lập.
+\end{itemize}
+
+Listing~\ref{lst:cli} minh họa lệnh sinh mã đầy đủ cho ca nghiên cứu.
+
+\begin{lstlisting}[caption={Lệnh sinh mã trên ca nghiên cứu CourseMan},label={lst:cli}]
+ddd-codegen generate \
+  -i examples/course-management.puml \
+  -a examples/course-management.activity.puml \
+  -c examples/CourseManagementRbac.ocl \
+  -o generated
+\end{lstlisting}
+
+Ba tùy chọn \texttt{-i}, \texttt{-a}, \texttt{-c} tương ứng ba tài liệu đặc tả đầu vào đã nêu ở mục~\ref{sec:tong-quan-pp}: biểu đồ lớp, biểu đồ hoạt động và tệp ràng buộc. Việc tách ba tệp -- thay vì gộp vào một định dạng riêng -- là chủ ý: mỗi tệp giữ được cú pháp gốc của công cụ tạo ra nó, nhờ đó người thiết kế vẫn dùng được trình vẽ PlantUML thông thường và vẫn quản lý phiên bản đặc tả bằng hệ thống quản lý mã nguồn.
+
+\subsection{Mỗi bước của phương pháp ứng với một thành phần cài đặt thay thế được}
+
+Bảng~\ref{tab:anh-xa-cong-cu} cho thấy mỗi bước của phương pháp được hiện thực hóa bởi thành phần nào và ở quy mô nào. Cấu trúc thư mục của mã nguồn công cụ được tổ chức đúng theo ranh giới này, để mỗi bước có thể thay thế độc lập.
+
+\begin{table}[htbp]
+\centering
+\caption{Ánh xạ năm bước của phương pháp sang thành phần công cụ}
+\label{tab:anh-xa-cong-cu}
+\small
+\begin{tabularx}{\textwidth}{@{}lXrl@{}}
+\toprule
+\textbf{Bước} & \textbf{Thành phần cài đặt} & \textbf{Dòng} & \textbf{Thư viện chính} \\
+\midrule
+1 & Bộ phân tích biểu đồ lớp & 464 & -- \\
+1 & Bộ phân tích biểu đồ hoạt động & 402 & -- \\
+1 & Bộ phân tích ràng buộc (từ vựng, cú pháp, dựng cây) & 1.173 & Chevrotain \\
+2, 3 & Bộ hợp nhất và làm giàu mô hình & 284 & -- \\
+4 & Bộ đánh giá bất biến & 721 & -- \\
+5 & Bộ sinh mã và hàm phụ trợ & 473 & Handlebars \\
+5 & Bộ mẫu sinh (15 tệp mẫu) & 586 & Handlebars \\
+-- & Siêu mô hình (cấu trúc, hành vi, kiểm soát truy cập) & 158 & -- \\
+-- & Giao diện dòng lệnh & 200 & Commander \\
+-- & Điểm vào và kịch bản thử bộ phân tích ràng buộc & 96 & -- \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Tổng cộng}} & \textbf{4.557} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Quy mô cài đặt là 3.971 dòng TypeScript trong 17 tệp mã, cộng 586 dòng mẫu sinh trong 15 tệp mẫu Handlebars. Phân bố này phản ánh đúng trọng tâm kỹ thuật của luận văn: hai khối lớn nhất là bộ phân tích ràng buộc (1.173 dòng) và bộ đánh giá bất biến (721 dòng), tức gần một nửa công sức cài đặt nằm ở bước~1 và bước~4 -- phần liên quan tới ngữ nghĩa hình thức -- chứ không phải ở bước sinh mã.
+
+\begin{nhanxet}
+\label{nx:mau-sinh-nho}
+Bộ mẫu sinh chỉ chiếm 586 dòng trên tổng 4.557 dòng, tức khoảng 13\%. Con số này là hệ quả trực tiếp của nguyên tắc ``mẫu sinh không chứa lô-gic'' đã nêu ở mục~\ref{sec:buoc5}: mọi tính toán đã được đẩy về bước chuẩn bị dữ liệu, nên mẫu chỉ còn là khuôn điền chỗ trống. Nó cũng là một chỉ báo về chi phí chuyển sang nền tảng đích khác: phần phải viết lại nhỏ hơn nhiều so với phần giữ nguyên.
+\end{nhanxet}
+
+\subsection{Bước kiểm chứng dùng bộ đánh giá nội bộ thay cho công cụ hình thức ngoài}
+
+Có một khác biệt so với thiết kế ở Chương~\ref{ch:phuong-phap} cần nêu ngay vì nó ảnh hưởng tới cách đọc kết quả của RQ3. Mục~\ref{sec:buoc4} mô tả bước kiểm chứng ở mức khái niệm, không ràng buộc cách hiện thực. Công cụ hiện tại đánh giá bất biến bằng một bộ đánh giá nội bộ (721 dòng) chạy trực tiếp trên mô hình đã làm giàu, thay vì kết xuất mô hình sang định dạng của một công cụ kiểm chứng ngoài như USE \citep{gogolla2007}. Lựa chọn này giúp bước~4 chạy trong cùng một tiến trình với bốn bước còn lại và không phụ thuộc cài đặt ngoài; cái giá phải trả là tập biểu thức OCL đánh giá được bị giới hạn trong phần mà bộ đánh giá nội bộ hỗ trợ, và điều này thể hiện rõ trong kết quả ở mục~\ref{sec:ket-qua}.
+
+\section{Ca nghiên cứu CourseMan và thiết kế bộ thí nghiệm đánh giá}
 \label{sec:ca-nghien-cuu}
-% Mô tả hai ngữ cảnh giới hạn, chính sách kiểm soát truy cập, thống kê đặc tả đầu vào.
 
-\section{Thiết kế đánh giá}
-\label{sec:thiet-ke-danh-gia}
-% Bốn câu hỏi nghiên cứu, thước đo, nguồn dữ liệu; quy trình bốn bước; bộ kịch bản kiểm thử.
+\subsection{Hai ngữ cảnh giới hạn với 15 lớp miền được khai báo}
 
-\section{Kết quả thực nghiệm}
+Ca nghiên cứu là hệ thống quản lý đào tạo CourseMan đã giới thiệu ở mục~\ref{subsec:vi-du-thuc-day}. Việc chọn ca nghiên cứu này có hai lý do: nó đủ nhỏ để trình bày trọn vẹn trong một chương, và nó đã được dùng trong mạch công trình DCSL, AGL, UDML \citep{le2018dcsl,dang2023agl,le2025udml} nên kết quả đối sánh được với các nghiên cứu trước.
+
+Ngữ cảnh \emph{ghi danh} gồm gốc tụ hợp \texttt{Student}; hai thực thể \texttt{CourseModule}, \texttt{Enrolment}; hai đối tượng giá trị \texttt{StudentName}, \texttt{Grade}; hai sự kiện miền \texttt{StudentEnrolledEvent}, \texttt{HelpRequestedEvent}; một dịch vụ miền \texttt{EnrollmentService}; hai kho lưu trữ khai báo tường minh; và hai ca sử dụng. Ngữ cảnh \emph{lớp học} gồm gốc tụ hợp \texttt{SClass}, thực thể \texttt{SClassRegistration} và sự kiện miền \texttt{RegisterIntoClassEvent}.
+
+Đặc tả khai báo 15 lớp. Sau bước~3, mô hình có 16 lớp: phép biến đổi sinh kho lưu trữ (mục~\ref{sec:buoc3}, phép (c)) đã bổ sung một giao diện truy xuất cho gốc tụ hợp \texttt{SClass} vốn chưa được khai báo kho lưu trữ.
+
+\subsection{Chính sách ba vai trò phủ trọn ba cấp RBAC}
+
+Chính sách được khai báo trong một gói riêng mang khuôn dập ngữ cảnh kiểm soát truy cập, ngay trên cùng biểu đồ lớp. Listing~\ref{lst:chinh-sach} trích phần chính sách.
+
+\begin{lstlisting}[language=PlantUML,caption={Chính sách kiểm soát truy cập của CourseMan (trích)},label={lst:chinh-sach}]
+package "RBAC" <<AccessControl>> {
+
+  class Admin <<Role>> {
+    MANAGE_STUDENTS  : Student.manage
+    ENROLL_STUDENTS  : Enrolment.create
+    VIEW_STUDENTS    : Student.read [all]
+    DELETE_STUDENTS  : Student.delete
+    MANAGE_ROLES     : Role.manage
+    <<cardinality max=5>>
+  }
+
+  class EnrollmentOfficer <<Role>> {
+    ENROLL_STUDENTS : Enrolment.create
+    VIEW_STUDENTS   : Student.read [own]
+    VIEW_COURSES    : CourseModule.read
+  }
+
+  class StudentRole <<Role>> {
+    VIEW_OWN_PROFILE     : Student.read [own]
+    VIEW_OWN_ENROLLMENTS : Enrolment.read [own]
+  }
+
+  Admin --|> EnrollmentOfficer
+  Admin ..> Auditor : <<SSD>>
+  EnrollmentOfficer ..> StudentRole : <<DSD(maxActiveRoles=1)>>
+}
+\end{lstlisting}
+
+Chính sách gồm ba vai trò với 10 quyền khai báo trực tiếp, một quan hệ kế thừa vai trò, một cặp phân tách nhiệm vụ tĩnh, một cặp phân tách nhiệm vụ động và một giới hạn số lượng. Bốn loại phần tử này phủ trọn ba cấp RBAC$_0$--RBAC$_2$ trong phạm vi đã nêu ở mục~\ref{sec:muc-tieu}.
+
+Bảng~\ref{tab:dac-ta-dau-vao} thống kê quy mô ba tài liệu đặc tả. Cột ``dòng có nghĩa'' loại bỏ dòng trống và dòng chú thích, vì đây mới là phần người thiết kế thực sự phải viết ra.
+
+\begin{table}[htbp]
+\centering
+\caption{Quy mô đặc tả đầu vào của ca nghiên cứu}
+\label{tab:dac-ta-dau-vao}
+\small
+\begin{tabularx}{\textwidth}{@{}Xrrl@{}}
+\toprule
+\textbf{Tài liệu} & \textbf{Tổng dòng} & \textbf{Dòng có nghĩa} & \textbf{Nội dung} \\
+\midrule
+Biểu đồ lớp -- phần cấu trúc & 141 & 116 & 15 lớp, 4 quan hệ, 2 ngữ cảnh \\
+Biểu đồ lớp -- phần chính sách & 43 & 23 & 3 vai trò, 10 quyền, 4 ràng buộc \\
+Biểu đồ hoạt động & 22 & 18 & 3 làn, 4 nút hoạt động \\
+Tệp ràng buộc & 78 & 54 & 10 ngữ cảnh, 15 bất biến \\
+\midrule
+\textbf{Tổng cộng} & \textbf{284} & \textbf{211} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bốn câu hỏi nghiên cứu được cụ thể hóa thành thước đo định lượng}
+\label{subsec:thuoc-do}
+
+Bốn câu hỏi nghiên cứu RQ1--RQ4 đã phát biểu ở mục~\ref{subsec:phat-bieu-bai-toan}. Bảng~\ref{tab:thuoc-do} cụ thể hóa mỗi câu hỏi thành thước đo định lượng và chỉ ra thí nghiệm cung cấp dữ liệu.
+
+\begin{table}[htbp]
+\centering
+\caption{Thước đo và nguồn dữ liệu cho bốn câu hỏi nghiên cứu}
+\label{tab:thuoc-do}
+\small
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Câu hỏi} & \textbf{Thước đo} & \textbf{Thí nghiệm} \\
+\midrule
+RQ1 & Số tệp và số dòng mã sinh ra; thời gian chạy; số lỗi biên dịch của mã sinh ra & E1, E2 \\
+RQ2 & Tỷ lệ giữa dòng mã sinh ra và dòng đặc tả; số tệp và số dòng thay đổi khi bổ sung một vai trò & E1, E6 \\
+RQ3 & Số bất biến đánh giá được; tỷ lệ đột biến bị phát hiện; hành vi của quy trình khi có vi phạm & E5 \\
+RQ4 & Tỷ lệ tệp sinh ra mang chú thích truy vết; độ mịn của chú thích; mức thay đổi khi lược bỏ mối quan tâm & E3, E4 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Sáu thí nghiệm, mỗi thí nghiệm thay đổi đúng một biến}
+\label{subsec:bo-thi-nghiem}
+
+Sáu thí nghiệm được thiết kế theo nguyên tắc: mỗi thí nghiệm thay đổi đúng một biến so với lần chạy cơ sở, để quy kết được kết quả cho nguyên nhân.
+
+\begin{description}[leftmargin=3.2em,style=sameline,itemsep=3pt]
+  \item[E1.] \textbf{Sinh mã cơ sở.} Chạy trọn năm bước trên ba tệp đặc tả gốc; ghi nhận kết xuất của từng bước, số tệp, số dòng mã và thời gian chạy.
+  \item[E2.] \textbf{Biên dịch mã sinh ra.} Đưa toàn bộ mã sinh ra vào một dự án TypeScript có sẵn các phụ thuộc của nền tảng đích, chạy trình biên dịch ở chế độ chỉ kiểm tra kiểu; phân loại lỗi thu được theo nguyên nhân.
+  \item[E3.] \textbf{Sinh lại.} Chạy lại E1 trên cùng đầu vào rồi so sánh toàn bộ cây thư mục kết quả của hai lần chạy, nhằm kiểm chứng tính idempotent đã nêu ở mục~\ref{sec:buoc5}.
+  \item[E4.] \textbf{Lược bỏ mối quan tâm kiểm soát truy cập.} Xóa toàn bộ gói chính sách khỏi biểu đồ lớp, chạy lại, rồi so sánh từng tầng của kết quả với E1. Đây là phép kiểm chứng trực tiếp cho tính trực giao phát biểu ở mục~\ref{sec:tinh-chat}.
+  \item[E5.] \textbf{Kiểm thử đột biến.} Tạo bốn biến thể của đặc tả, mỗi biến thể vi phạm đúng một bất biến, rồi quan sát bước~4 có phát hiện được hay không và quy trình xử lý ra sao.
+  \item[E6.] \textbf{Bổ sung một vai trò.} Thêm một vai trò mới vào gói chính sách, chạy lại, rồi đo phạm vi thay đổi trong mã sinh ra.
+\end{description}
+
+\paragraph{Bộ đột biến.}
+Bốn đột biến của E5 được chọn để phủ bốn lớp lỗi đặc tả khác nhau, tương ứng bốn bất biến trong Bảng~\ref{tab:bat-bien}. Bảng~\ref{tab:dot-bien} mô tả từng đột biến và kỳ vọng tương ứng. Điểm cần nhấn mạnh: các đột biến được chọn theo bất biến cần phủ, không theo khả năng xử lý của công cụ.
+
+\begin{table}[htbp]
+\centering
+\caption{Bốn đột biến của đặc tả và kỳ vọng phát hiện}
+\label{tab:dot-bien}
+\small
+\begin{tabularx}{\textwidth}{@{}llXl@{}}
+\toprule
+\textbf{Mã} & \textbf{Phép đột biến} & \textbf{Mô tả} & \textbf{Bất biến} \\
+\midrule
+M1 & Nhân bản tên vai trò & Đổi tên \texttt{StudentRole} thành \texttt{Admin} & I1 \\
+M2 & Tạo chu trình kế thừa & Thêm cạnh \texttt{EnrollmentOfficer -{}-|> Admin} & I5 \\
+M3 & Đa kế thừa vai trò & Thêm cạnh \texttt{Admin -{}-|> StudentRole} & I5 \\
+M4 & Tài nguyên không tồn tại & Đổi quyền thành \texttt{GhostClass.read} & I3 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Môi trường thực nghiệm.}
+Toàn bộ thí nghiệm chạy trên Node.js phiên bản 22, trình quản lý gói npm phiên bản 10, hệ điều hành Linux. Thí nghiệm E2 dùng trình biên dịch TypeScript với đích biên dịch ES2021, bật hai tùy chọn cho cú pháp chú thích của nền tảng đích, và ở chế độ chỉ kiểm tra kiểu chứ không kết xuất. Ba tệp đặc tả đầu vào giữ nguyên không sửa trong mọi thí nghiệm trừ E4, E5, E6 -- nơi phép sửa được mô tả tường minh ở trên.
+
+\section{Kết quả thực nghiệm theo bốn câu hỏi nghiên cứu}
 \label{sec:ket-qua}
-% Kết quả theo RQ1--RQ4.
 
-\section{Các nguy cơ ảnh hưởng tính hợp lệ}
-\label{sec:threats}
-% Internal, external, construct, conclusion validity và biện pháp giảm thiểu.
+\subsection{RQ1 -- Pipeline chạy trọn vẹn nhưng mã sinh ra chưa biên dịch sạch}
 
-\section{Bàn luận}
+\paragraph{Pipeline chạy trọn vẹn.}
+Thí nghiệm E1 hoàn tất trong khoảng 4 giây và kết xuất tóm tắt của từng bước như Listing~\ref{lst:ket-xuat}.
+
+\begin{lstlisting}[caption={Kết xuất của thí nghiệm E1},label={lst:ket-xuat}]
+[1/3] Parsing PlantUML + OCL...
+      ok 2 bounded context(s), 3 role(s), 4 AGL activity node(s)
+      OCL: 10 context(s), 15 invariant(s)
+[2/3] Applying DDD + RBAC transformations + OCL evaluation...
+      ok 16 classes enriched
+      OCL results: 5 passed, 0 failed, 10 unsupported, 0 error
+[3/3] Generating NestJS TypeScript code...
+      ok Code written to generated/
+\end{lstlisting}
+
+Kết quả sinh mã là 31 tệp với tổng 1.432 dòng TypeScript. Bảng~\ref{tab:phan-bo-ma} phân bố số liệu này theo ngữ cảnh giới hạn và theo tầng kiến trúc, cho thấy cấu trúc đầu ra đúng với ánh xạ đã thiết kế ở Bảng~\ref{tab:anh-xa-sinh-ma}: mỗi ngữ cảnh giới hạn thành một mô-đun bốn tầng, và mối quan tâm kiểm soát truy cập thành một mô-đun dùng chung.
+
+\begin{table}[htbp]
+\centering
+\caption{Phân bố mã sinh ra theo ngữ cảnh giới hạn và tầng kiến trúc}
+\label{tab:phan-bo-ma}
+\small
+\begin{tabularx}{\textwidth}{@{}Xrrr r@{}}
+\toprule
+\textbf{Thành phần} & \multicolumn{2}{c}{\textbf{Ghi danh}} & \multicolumn{2}{c}{\textbf{Lớp học}} \\
+ & Tệp & Dòng & Tệp & Dòng \\
+\midrule
+Tầng miền & 10 & 439 & 4 & 159 \\
+Tầng ứng dụng & 3 & 164 & 1 & 55 \\
+Tầng trình diễn & 1 & 82 & 1 & 82 \\
+Tầng hạ tầng & 2 & 94 & 1 & 42 \\
+Mô-đun ngữ cảnh & 1 & 56 & 1 & 50 \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{Mô-đun kiểm soát truy cập dùng chung}: 6 tệp, 209 dòng} \\
+\midrule
+\textbf{Tổng cộng} & \multicolumn{4}{r}{\textbf{31 tệp, 1.432 dòng}} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Mô-đun kiểm soát truy cập gồm sáu tệp: kiểu liệt kê vai trò kèm bảng phân cấp, kiểu liệt kê quyền, bảng gán quyền, điểm kiểm soát truy cập, và hai chú thích đánh dấu yêu cầu quyền. Mười điểm cuối trên hai bộ điều khiển đều được gắn chú thích yêu cầu quyền -- nghĩa là không có điểm cuối nào lọt ra ngoài phạm vi kiểm soát, đúng như mục tiêu đã đặt ra ở mục~\ref{subsec:thach-thuc} khi phân tích triệu chứng ``rải rác''.
+
+\paragraph{Lan truyền quyền hoạt động đúng.}
+Vai trò \texttt{Admin} khai báo trực tiếp 5 quyền và kế thừa \texttt{EnrollmentOfficer}. Sau bước~3, tập quyền hiệu dụng của \texttt{Admin} có 6 phần tử: quyền \texttt{VIEW\_COURSES} đã chảy ngược từ vai trò cha lên. Bảng gán quyền sinh ra ghi đúng sáu quyền này. Đây là kiểm chứng thực nghiệm cho thuật toán ở Listing~\ref{alg:lan-truyen}.
+
+\paragraph{Mã sinh ra chưa biên dịch sạch.}
+Thí nghiệm E2 cho kết quả không đạt kỳ vọng: trình biên dịch báo 51 lỗi. Bảng~\ref{tab:loi-bien-dich} phân loại các lỗi này theo nguyên nhân.
+
+\begin{table}[htbp]
+\centering
+\caption{Phân loại 51 lỗi biên dịch của mã sinh ra}
+\label{tab:loi-bien-dich}
+\small
+\begin{tabularx}{\textwidth}{@{}Xrl@{}}
+\toprule
+\textbf{Nguyên nhân} & \textbf{Số lỗi} & \textbf{Vị trí} \\
+\midrule
+Trường bị khai báo trùng trong lớp sự kiện miền & 16 & Mẫu sinh sự kiện miền \\
+Kiểu \texttt{int} của biểu đồ không được ánh xạ sang kiểu số & 13 & Bộ chuẩn bị dữ liệu \\
+Đường dẫn nhập tương đối sai một cấp & 11 & Mẫu sinh đơn vị xử lý, điểm kiểm soát \\
+Thiếu câu lệnh nhập cho lớp được tham chiếu chéo & 5 & Mẫu sinh thực thể, dịch vụ miền \\
+\midrule
+\textit{Thiếu phụ thuộc của nền tảng đích trong môi trường đo} & \textit{6} & \textit{Không phải lỗi bộ sinh} \\
+\midrule
+\textbf{Tổng cộng} & \textbf{51} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sáu lỗi cuối bảng phát sinh do môi trường đo không cài thư viện truy xuất dữ liệu mà mẫu sinh kho lưu trữ tham chiếu; chúng biến mất khi dự án đích cài đủ phụ thuộc, nên không tính là khiếm khuyết của bộ sinh. Còn lại 45 lỗi là khiếm khuyết thực sự, tập trung ở bốn mẫu sinh và ở bộ chuẩn bị dữ liệu.
+
+\paragraph{Trả lời RQ1.}
+Phương pháp \emph{khả thi ở mức kiến trúc và ánh xạ}: pipeline chạy trọn năm bước không cần can thiệp thủ công, cấu trúc mã sinh ra đúng với ánh xạ đã thiết kế, mọi điểm cuối đều được kiểm soát, và lan truyền quyền cho kết quả đúng. Tuy nhiên công cụ \emph{chưa đạt mức bản mẫu biên dịch sạch}: 45 lỗi thuộc bốn nhóm nguyên nhân đều mang tính kỹ thuật cục bộ trong mẫu sinh, không đụng tới thiết kế của phương pháp, nhưng chúng là rào cản thực tế giữa bản mẫu sinh ra và một dự án chạy được.
+
+\subsection{RQ2 -- Khuếch đại gần bảy lần và phạm vi sửa chính sách gói trong ba tệp}
+
+\paragraph{Tỷ lệ khuếch đại.}
+Bảng~\ref{tab:nang-suat} đối chiếu công sức đặc tả với sản phẩm mã, tách riêng phần cấu trúc và phần chính sách.
+
+\begin{table}[htbp]
+\centering
+\caption{Đối chiếu công sức đặc tả và mã sinh ra}
+\label{tab:nang-suat}
+\small
+\begin{tabularx}{\textwidth}{@{}Xrrr@{}}
+\toprule
+\textbf{Mối quan tâm} & \textbf{Dòng đặc tả} & \textbf{Dòng mã sinh} & \textbf{Tỷ lệ} \\
+\midrule
+Cấu trúc và hành vi & 134 & 1.223 & 9,1$\times$ \\
+Kiểm soát truy cập & 23 & 209 & 9,1$\times$ \\
+\midrule
+\textbf{Toàn bộ} (kể cả tệp ràng buộc) & \textbf{211} & \textbf{1.432} & \textbf{6,8}$\times$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Con số đáng chú ý không phải tỷ lệ tổng thể mà là sự tương đồng giữa hai dòng đầu: mối quan tâm kiểm soát truy cập được khuếch đại ở cùng bậc với mối quan tâm cấu trúc. Nói cách khác, phương pháp không xử lý kiểm soát truy cập như một phần phụ trợ được gắn thêm mà như một mối quan tâm ngang hàng, đúng với yêu cầu (a) trong phát biểu bài toán.
+
+\paragraph{Định vị thay đổi.}
+Thí nghiệm E6 bổ sung một vai trò mới với ba quyền, tốn 6 dòng đặc tả. Sau khi sinh lại, phép so sánh toàn bộ cây thư mục cho thấy thay đổi gói gọn trong \emph{đúng ba tệp}, tổng cộng 7 dòng, và cả ba tệp đều nằm trong mô-đun kiểm soát truy cập: kiểu liệt kê vai trò, kiểu liệt kê quyền và bảng gán quyền. Không một tệp nào ở tầng miền, tầng ứng dụng, tầng trình diễn hay tầng hạ tầng bị chạm tới.
+
+Đây là kết quả có ý nghĩa thực tiễn hơn tỷ lệ khuếch đại. Trong cách cài đặt thủ công mà mục~\ref{subsec:thach-thuc} mô tả, việc thêm một vai trò đòi hỏi rà soát mọi điểm kiểm tra quyền nằm rải rác để quyết định điểm nào cần cập nhật -- và chính công đoạn rà soát này là nơi phát sinh lỗ hổng do bỏ sót. Với phương pháp đề xuất, tập tệp cần đọc lại khi chính sách thay đổi là một tập cố định gồm ba tệp, xác định trước, không phụ thuộc quy mô hệ thống. Lợi ích thực sự của phương pháp vì vậy không nằm ở lần viết đầu tiên mà ở mọi lần sửa về sau.
+
+\paragraph{Trả lời RQ2.}
+Phương pháp cho tỷ lệ khuếch đại khoảng 6,8 lần trên toàn bộ đặc tả và khoảng 9 lần trên riêng phần chính sách. Quan trọng hơn, nó biến bài toán ``sửa chính sách'' từ một phép rà soát toàn hệ thống thành một phép sửa cục bộ với phạm vi ảnh hưởng biết trước.
+
+\subsection{RQ3 -- Chỉ một phần tư đột biến bị phát hiện và vi phạm không chặn sinh mã}
+
+\paragraph{Mức phủ của bước kiểm chứng.}
+Tệp ràng buộc khai báo 15 bất biến trên 10 ngữ cảnh. Bước~4 đánh giá được 5 bất biến và trả về ``không hỗ trợ'' cho 10 bất biến còn lại. Bảng~\ref{tab:ket-qua-ocl} liệt kê đầy đủ và nêu lý do của từng trường hợp không đánh giá được.
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đánh giá 15 bất biến ở bước~4}
+\label{tab:ket-qua-ocl}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Bất biến} & \textbf{Kết quả} & \textbf{Ghi chú} \\
+\midrule
+\texttt{UniqueRoleName} & đạt & Đánh giá trên 3 vai trò \\
+\texttt{PermissionsWellFormed} & đạt & Đánh giá trên 3 vai trò \\
+\texttt{AcyclicHierarchy} & đạt & Đánh giá trên 3 vai trò \\
+\texttt{SeniorInheritsJuniorPermissions} & đạt & Kiểm chứng kết quả bước~3 \\
+\texttt{SingleInheritanceInGenerator} & đạt & Ràng buộc riêng của cài đặt \\
+\midrule
+\texttt{OnlyAssignedRolesActivated} & không hỗ trợ & Ngữ cảnh người dùng thuộc thời điểm vận hành \\
+\texttt{SessionHasOwner} & không hỗ trợ & Ngữ cảnh phiên thuộc thời điểm vận hành \\
+\texttt{CardinalityRespected} & không hỗ trợ & Giới hạn số lượng chưa được nâng vào mô hình \\
+\texttt{PrerequisiteRole} & không hỗ trợ & Vai trò tiên quyết chưa có trong siêu mô hình \\
+\texttt{NoSharedUser} & không hỗ trợ & Cặp xung khắc tĩnh chưa được nâng vào mô hình \\
+\texttt{NotCoActivated} & không hỗ trợ & Cặp xung khắc động chưa được nâng vào mô hình \\
+\texttt{AcyclicMapping} & không hỗ trợ & Ánh xạ vai trò liên miền -- ngoài phạm vi \\
+\texttt{NoPrivilegeEscalation} & không hỗ trợ & Ánh xạ vai trò liên miền -- ngoài phạm vi \\
+\texttt{NoConflictAcrossDomains} & không hỗ trợ & Xung khắc liên miền -- ngoài phạm vi \\
+\texttt{RolesBelongToDomain} & không hỗ trợ & Không gian tên miền -- ngoài phạm vi \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Mười trường hợp không đánh giá được chia thành ba nhóm với ba nguyên nhân khác nhau, và việc phân biệt ba nhóm này là điều kiện để đọc đúng con số 5/15:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+  \item \emph{Hai bất biến thuộc thời điểm vận hành} (\texttt{OnlyAssignedRolesActivated}, \texttt{SessionHasOwner}) không đánh giá được ở mức mô hình là \emph{đúng theo thiết kế}: chúng nói về phiên làm việc và người dùng thực, tức thuộc nhóm mà Nhận xét~\ref{nx:hai-thoi-diem} đã chỉ ra là không có giá trị chân lý khi hệ thống chưa chạy.
+  \item \emph{Bốn bất biến ngoài phạm vi luận văn} (bốn dòng cuối bảng) nói về kiểm soát truy cập liên miền -- phần đã được tuyên bố là hướng phát triển ở mục~\ref{sec:muc-tieu}. Chúng có mặt trong tệp ràng buộc vì tệp này được viết cho một phạm vi rộng hơn phạm vi cuối cùng của luận văn.
+  \item \emph{Bốn bất biến còn lại} (\texttt{CardinalityRespected}, \texttt{PrerequisiteRole}, \texttt{NoSharedUser}, \texttt{NotCoActivated}) mới là khoảng cách thực sự giữa phương pháp và cài đặt. Chúng thuộc phạm vi RBAC$_2$ mà mục~\ref{sec:muc-tieu} tuyên bố có hỗ trợ ở mức đặc tả và kiểm chứng thiết kế. Đặc tả có: giới hạn số lượng, cặp xung khắc tĩnh và cặp xung khắc động đều được khai báo trên biểu đồ (Listing~\ref{lst:chinh-sach}). Nhưng bộ phân tích ở bước~1 chưa nhận diện các khuôn dập này, nên chúng không đi vào mô hình, và bước~4 không có dữ liệu để đánh giá.
+\end{itemize}
+
+\paragraph{Kiểm thử đột biến.}
+Bảng~\ref{tab:ket-qua-dot-bien} là kết quả của thí nghiệm E5.
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả kiểm thử đột biến}
+\label{tab:ket-qua-dot-bien}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Đột biến} & \textbf{Phát hiện} & \textbf{Phân tích} \\
+\midrule
+M1 -- trùng tên vai trò & không & Bộ phân tích gộp hai khai báo trùng tên thành một; đột biến bị triệt tiêu trước khi tới bước~4 \\
+M2 -- chu trình kế thừa & \textbf{có} & Bất biến \texttt{AcyclicHierarchy} báo sai, chẩn đoán nêu đúng hai vai trò nằm trong chu trình \\
+M3 -- đa kế thừa & không & Mô hình lưu quan hệ kế thừa bằng một trường đơn trị nên cạnh thứ hai ghi đè cạnh thứ nhất \\
+M4 -- tài nguyên không tồn tại & không & Bất biến I3 chưa được cài đặt; phần tài nguyên của biểu thức quyền bị loại bỏ ngay ở bước~1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Tỷ lệ phát hiện là 1/4. Ba trường hợp không phát hiện có cùng một nguyên nhân gốc, được truy nguyên ở mục~\ref{subsec:nguyen-nhan-goc}.
+
+\paragraph{Vi phạm bất biến không chặn bước sinh mã.}
+Một quan sát bổ sung từ E5: khi chạy lệnh sinh mã trên đột biến M2 -- đặc tả có chu trình kế thừa và bị bước~4 báo sai -- quy trình vẫn chạy tiếp và ghi ra đủ 31 tệp, mã trả về của tiến trình là 0. Kết quả này trái với nguyên tắc thứ ba đã phát biểu ở mục~\ref{sec:tong-quan-pp}: ``mô hình phải vượt qua bước kiểm chứng thì mới được chuyển sang bước sinh mã''. Đây là khiếm khuyết của cài đặt chứ không phải của thiết kế: bước~4 tính đúng kết quả và ghi nhận vi phạm, nhưng bước điều phối ở giao diện dòng lệnh chưa dùng kết quả đó làm điều kiện dừng.
+
+\paragraph{Trả lời RQ3.}
+Bước kiểm chứng \emph{phát hiện đúng lớp vi phạm mà mô hình trung gian biểu diễn được}: chu trình kế thừa vai trò bị bắt và chẩn đoán chỉ đúng phần tử gây lỗi. Nhưng công cụ \emph{chưa ngăn chặn được vi phạm} theo hai nghĩa: ba trong bốn lớp lỗi đặc tả không tới được bước~4 do mô hình trung gian chưa đủ biểu cảm, và vi phạm đã phát hiện cũng không chặn bước sinh mã.
+
+\subsection{RQ4 -- Trực giao và idempotent được xác nhận, truy vết mới tới mức phần tử}
+
+\paragraph{Chú thích truy vết.}
+Cả 31 tệp sinh ra đều mang khối chú thích ở đầu tệp. Trong đó 26 tệp nêu rõ khái niệm siêu mô hình mà tệp được sinh ra từ đó, và 23 tệp nêu ngữ cảnh giới hạn chứa phần tử nguồn. Listing~\ref{lst:truy-vet} là một ví dụ.
+
+\begin{lstlisting}[caption={Chú thích truy vết ở đầu một tệp sinh ra},label={lst:truy-vet}]
+/**
+ * EnrollStudentUseCase - Application Use Case
+ * Generated by ddd-codegen | Context: EnrollmentContext
+ * Metamodel: AGL ANode (application-layer action sequence)
+ *
+ * AGL activity diagram input (traced from `.activity.puml`):
+ *   open -> newObject -> setDataFieldValues -> createObject
+ */
+\end{lstlisting}
+
+Tuy nhiên không tệp nào chứa tham chiếu tới tệp và số dòng của đặc tả gốc. Quan hệ truy vết ngược vì vậy đạt ở \emph{mức phần tử mô hình} -- người đọc biết tệp này sinh từ ca sử dụng nào, thuộc ngữ cảnh nào, ứng với khái niệm siêu mô hình nào -- nhưng chưa đạt \emph{mức dòng} như mục~\ref{sec:buoc1} đặt ra. Nguyên nhân là bộ phân tích ở bước~1 chưa lưu vị trí xuất xứ cho từng nút cây cú pháp, nên các bước sau không có thông tin để truyền tiếp.
+
+\paragraph{Tính trực giao.}
+Thí nghiệm E4 xóa toàn bộ gói chính sách khỏi biểu đồ lớp rồi sinh lại. Bảng~\ref{tab:truc-giao} so sánh kết quả với E1.
+
+\begin{table}[htbp]
+\centering
+\caption{So sánh kết quả sinh mã khi có và không có mối quan tâm kiểm soát truy cập}
+\label{tab:truc-giao}
+\small
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+\textbf{Thành phần} & \textbf{Kết quả so sánh} \\
+\midrule
+Tầng miền -- cả hai ngữ cảnh & giống hệt từng byte \\
+Tầng ứng dụng -- cả hai ngữ cảnh & giống hệt từng byte \\
+Tầng hạ tầng -- cả hai ngữ cảnh & giống hệt từng byte \\
+Tầng trình diễn -- ngữ cảnh lớp học & giống hệt từng byte \\
+Tầng trình diễn -- ngữ cảnh ghi danh & khác 3 dòng chú thích quyền \\
+Mô-đun kiểm soát truy cập & vẫn được sinh, các kiểu liệt kê rỗng \\
+\midrule
+Tổng số dòng & 1.432 $\to$ 1.404 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Kết quả này xác nhận tính trực giao ở mức mạnh cho ba tầng dưới: lược bỏ hoàn toàn một trong ba mối quan tâm không làm thay đổi \emph{một byte nào} của mã sinh ra cho hai mối quan tâm còn lại. Ba dòng khác biệt ở tầng trình diễn có nguyên nhân cụ thể: khi không có vai trò nào khai báo quyền, bộ sinh quay về dùng bộ quyền mặc định theo quy ước đặt tên cho ba điểm cuối ghi dữ liệu, nên tên quyền trong chú thích đổi. Nghĩa là điểm cuối vẫn được bảo vệ, chỉ khác nhãn quyền.
+
+Một chi tiết cần ghi nhận: mô-đun kiểm soát truy cập vẫn được sinh ra ngay cả khi mô hình không có vai trò nào, với các kiểu liệt kê rỗng. Đây là hành vi chưa tối ưu -- theo tinh thần trực giao, mối quan tâm vắng mặt thì sản phẩm mã tương ứng cũng nên vắng mặt -- nhưng không phá vỡ tính trực giao vì nó không ảnh hưởng tới hai mối quan tâm còn lại.
+
+\paragraph{Tính idempotent.}
+Thí nghiệm E3 chạy lại trên cùng đầu vào và so sánh toàn bộ cây thư mục kết quả: không có khác biệt nào. Tính idempotent phát biểu ở mục~\ref{sec:buoc5} được xác nhận.
+
+\paragraph{Mức dễ hiểu.}
+Thước đo mức dễ hiểu đòi hỏi khảo sát người dùng: đặt biểu đồ và tệp ràng buộc bên cạnh mã sinh ra rồi hỏi người đọc về khả năng định vị và giải thích chính sách. Khảo sát này chưa được thực hiện trong phạm vi luận văn. Phần trả lời RQ4 vì vậy chỉ dựa trên thước đo khách quan là chú thích truy vết và mức định vị thay đổi ở E6, chứ không có dữ liệu chủ quan từ người dùng. Hạn chế này được nêu lại ở mục~\ref{subsec:threats}.
+
+\paragraph{Trả lời RQ4.}
+Quan hệ truy vết hai chiều tồn tại ở mức phần tử mô hình nhưng chưa ở mức dòng. Tính trực giao được xác nhận bằng thực nghiệm ở mức mạnh nhất có thể đo được -- so sánh từng byte -- cho ba trên bốn tầng, và ở mức chấp nhận được cho tầng còn lại. Tính idempotent được xác nhận. Phần đánh giá mức dễ hiểu bằng khảo sát người dùng còn bỏ ngỏ.
+
+\subsection{Tổng hợp: hai câu hỏi đạt một phần, một đạt, một chưa đạt}
+
+Bảng~\ref{tab:tong-hop} tóm tắt kết quả theo bốn câu hỏi nghiên cứu.
+
+\begin{table}[htbp]
+\centering
+\caption{Tổng hợp kết quả thực nghiệm theo bốn câu hỏi nghiên cứu}
+\label{tab:tong-hop}
+\small
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Câu hỏi} & \textbf{Kết quả chính} & \textbf{Đánh giá} \\
+\midrule
+RQ1 & Pipeline chạy trọn vẹn, 31 tệp / 1.432 dòng, cấu trúc đúng ánh xạ; 45 lỗi biên dịch thuộc 4 nhóm & Đạt một phần \\
+RQ2 & Tỷ lệ 6,8$\times$; thêm một vai trò chỉ chạm 3 tệp / 7 dòng & Đạt \\
+RQ3 & 5/15 bất biến đánh giá được; 1/4 đột biến bị phát hiện; vi phạm không chặn sinh mã & Chưa đạt \\
+RQ4 & 31/31 tệp có chú thích truy vết ở mức phần tử; trực giao và idempotent được xác nhận & Đạt một phần \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Bàn luận: nguyên nhân gốc của hạn chế và nguy cơ đối với tính hợp lệ}
 \label{sec:ban-luan}
-% Đối sánh với công trình liên quan; bài học rút ra; giới hạn của công cụ.
+
+\subsection{Dữ liệu thực nghiệm làm rõ vị trí của luận văn trong mạch nghiên cứu}
+
+Bảng~\ref{tab:khoang-trong} ở mục~\ref{subsec:doi-sanh} đã đối sánh các nhóm công trình theo năm tiêu chí trên cơ sở thiết kế của phương pháp, trước khi có dữ liệu thực nghiệm. Kết quả của chương này cho phép nói cụ thể hơn về vị trí của luận văn.
+
+So với nhóm phân tích chính sách bằng UML/OCL \citep{ray2004,sohr2008}, luận văn đi thêm một bước là sinh mã, và bằng chứng là 209 dòng mã thực thi kiểm soát truy cập được sinh ra từ 23 dòng chính sách. Ở chiều ngược lại, hai công trình đó mạnh hơn hẳn ở phần kiểm chứng: chúng dùng công cụ kiểm chứng hình thức đầy đủ, còn bộ đánh giá nội bộ của luận văn mới đánh giá được 5/15 bất biến. Kết quả này cho thấy quyết định thiết kế nêu ở mục~\ref{sec:cong-cu} -- tự cài bộ đánh giá thay vì kết xuất sang công cụ ngoài -- đã phải trả giá đúng ở chỗ dự đoán được.
+
+So với an toàn hướng mô hình \citep{lodderstedt2002,basin2006}, điểm chung là cùng sinh hạ tầng kiểm soát truy cập từ hồ sơ UML. Khác biệt mà thực nghiệm làm rõ: đầu ra của luận văn là bản mẫu phân tầng theo ngữ cảnh giới hạn, khớp với kiến trúc vi dịch vụ hiện đại \citep{le2025tmsa,richardson2018}, và đặc tả ở dạng văn bản thuần nên quản lý được bằng hệ thống quản lý phiên bản -- chính điều kiện làm cho thí nghiệm E6 khả thi.
+
+So với mạch aDSL của nhóm \citep{le2018dcsl,dang2023agl,le2025udml}, đóng góp bổ sung của luận văn nằm ở tính trực giao đo được: kết quả E4 cho thấy mối quan tâm kiểm soát truy cập được ghép vào và tách ra khỏi mô hình miền mà không để lại dấu vết nào trên hai mối quan tâm còn lại. Đây là bằng chứng thực nghiệm cho tiêu chí trực giao mà UDML \citep{le2025udml} phát biểu ở mức ngôn ngữ.
+
+\subsection{Phần lớn hạn chế quy về một nguyên nhân: bộ phân tích nhận hẹp hơn cú pháp đã đặc tả}
+\label{subsec:nguyen-nhan-goc}
+
+Ba trong bốn đột biến không bị phát hiện, bốn bất biến RBAC$_2$ không đánh giá được, và việc ánh xạ quyền sang điểm cuối phải dựa vào quy ước đặt tên -- ba hiện tượng bề ngoài khác nhau này đều quy về một nguyên nhân duy nhất: bộ phân tích ở bước~1 nhận một tập con hẹp hơn cú pháp cụ thể đã đặc tả ở mục~\ref{subsec:cu-phap-cu-the}. Cụ thể, biểu thức quyền theo văn phạm~\ref{lst:van-pham} bị rút gọn còn phần tên, và bốn khuôn dập ràng buộc RBAC$_2$ không được nhận diện.
+
+Hệ quả trên từng đột biến: với M1, mô hình dùng bảng tra theo tên nên không biểu diễn được hai vai trò cùng tên; với M3, quan hệ kế thừa là trường đơn trị nên không biểu diễn được hai vai trò cha; với M4, biểu thức quyền bị rút gọn còn tên quyền nên không giữ lại thành phần tài nguyên để đối chiếu. Trong cả ba trường hợp, đột biến không bị ``đánh giá sai'' mà bị \emph{triệt tiêu trước khi được đánh giá}.
+
+\begin{nhanxet}
+\label{nx:nghich-ly-dot-bien}
+Kết quả này làm lộ ra một nguy cơ phương pháp luận đáng ghi nhận: một mô hình trung gian càng nghèo thì càng ít khả năng biểu diễn đặc tả sai, và do đó càng dễ ``vượt qua'' bước kiểm chứng. Tỷ lệ bất biến đạt cao vì thế không phải là bằng chứng của tính đúng đắn nếu không kèm theo bằng chứng rằng mô hình đủ biểu cảm để chứa được cái sai. Kiểm thử đột biến chính là công cụ cung cấp bằng chứng còn thiếu đó, và trong luận văn này nó đã phát hiện ra điều mà tỷ lệ ``5 đạt, 0 sai'' che mất.
+\end{nhanxet}
+
+Bài học phương pháp luận rút ra: khi một ngôn ngữ đã có cú pháp cụ thể được đặc tả hình thức, việc kiểm tra bộ phân tích \emph{chấp nhận đúng ngôn ngữ đó} cần được coi là một hạng mục kiểm thử riêng, chứ không phải hệ quả tự nhiên của việc chạy được trên ca nghiên cứu.
+
+\paragraph{Một quan sát phụ về nguồn sự thật của phép lan truyền quyền.}
+Bảng gán quyền sinh ra đã chứa tập quyền hiệu dụng sau lan truyền, nhưng điểm kiểm soát truy cập lúc chạy vẫn mở rộng vai trò theo bảng phân cấp một lần nữa. Kết quả không sai vì phép hợp là lũy đẳng, nhưng đây là một quyết định nên được chọn dứt khoát: hoặc tính sẵn ở thời điểm thiết kế để mã chạy nhanh và đơn giản, hoặc để lúc vận hành để đổi được phân cấp mà không phải sinh lại. Làm cả hai khiến người đọc mã khó biết đâu là nguồn sự thật.
+
+\subsection{Sáu trên tám hạn chế thuộc về cài đặt, hai hạn chế chạm tới thiết kế}
+
+Bảng~\ref{tab:han-che} tổng hợp các hạn chế đã phát hiện, phân biệt rõ hạn chế nào thuộc về cài đặt và hạn chế nào chạm tới thiết kế phương pháp.
+
+\begin{table}[htbp]
+\centering
+\caption{Hạn chế của công cụ và hướng khắc phục}
+\label{tab:han-che}
+\small
+\begin{tabularx}{\textwidth}{@{}XlX@{}}
+\toprule
+\textbf{Hạn chế} & \textbf{Loại} & \textbf{Hướng khắc phục} \\
+\midrule
+Biểu thức quyền bị rút gọn còn phần tên; tài nguyên và thao tác không đi vào mô hình & Cài đặt & Cài văn phạm~\ref{lst:van-pham} đầy đủ; mở khóa I3, I4 và ánh xạ quyền sang điểm cuối theo mô hình \\
+Bốn khuôn dập RBAC$_2$ không được nhận diện & Cài đặt & Bổ sung luật nhận diện ở bước~1 và trường tương ứng trong siêu mô hình \\
+Vi phạm bất biến không chặn bước sinh mã & Cài đặt & Dùng kết quả bước~4 làm điều kiện dừng ở lớp điều phối \\
+Quan hệ kế thừa vai trò là đơn trị & Cài đặt & Chuyển sang tập cha; bổ sung phát hiện đa kế thừa \\
+Không lưu vị trí xuất xứ nên truy vết chỉ tới mức phần tử & Cài đặt & Gắn tệp và số dòng vào từng nút cây cú pháp ở bước~1 \\
+Mã sinh ra còn 45 lỗi biên dịch thuộc 4 nhóm & Cài đặt & Sửa bốn mẫu sinh và bảng ánh xạ kiểu \\
+Bộ đánh giá bất biến nội bộ, chưa dùng công cụ kiểm chứng ngoài & Thiết kế & Bổ sung bộ kết xuất mô hình sang định dạng của USE \citep{gogolla2007} \\
+Chưa có khảo sát người dùng cho mức dễ hiểu & Đánh giá & Thực hiện khảo sát trên nhóm người đọc độc lập \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Điểm cần nhấn mạnh khi đọc bảng này: sáu hạn chế đầu thuộc về cài đặt, nghĩa là chúng không đòi hỏi sửa siêu mô hình, thuật toán hay quy trình năm bước đã trình bày ở Chương~\ref{ch:phuong-phap}. Hai hạn chế cuối mới chạm tới quyết định thiết kế và kế hoạch đánh giá. Sự phân định này quan trọng vì nó xác định phạm vi của kết luận: thực nghiệm chưa bác bỏ điểm nào trong thiết kế của phương pháp, nhưng cũng chưa kiểm chứng được trọn vẹn phần RBAC$_2$ và phần truy vết mức dòng.
+
+\subsection{Bốn nhóm nguy cơ ảnh hưởng tính hợp lệ của kết quả}
+\label{subsec:threats}
+
+\paragraph{Nguy cơ về tính hợp lệ nội tại.}
+Người thực hiện luận văn đồng thời là người viết đặc tả, người cài đặt công cụ và người thiết kế bộ đột biến. Nguy cơ là bộ đột biến vô tình được chọn theo hướng mà công cụ xử lý được. Biện pháp giảm thiểu đã áp dụng: bốn đột biến được chọn theo bốn bất biến trong Bảng~\ref{tab:bat-bien} chứ không theo khả năng của công cụ, và kết quả 1/4 -- một tỷ lệ bất lợi cho công cụ -- là bằng chứng gián tiếp rằng bộ đột biến không bị chọn thiên vị. Nguy cơ còn lại: số đo dòng mã nhạy cảm với quy ước định dạng của mẫu sinh, nên tỷ lệ khuếch đại ở RQ2 nên đọc như một bậc độ lớn chứ không phải một giá trị chính xác.
+
+\paragraph{Nguy cơ về tính hợp lệ ngoại tại.}
+Kết quả thu được trên \emph{một} ca nghiên cứu, với \emph{một} nền tảng đích. Ca nghiên cứu có quy mô nhỏ: 16 lớp, 3 vai trò, phân cấp vai trò chỉ hai tầng. Ba giới hạn kéo theo:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item Chưa thể khẳng định phương pháp giữ được hiệu quả trên mô hình có hàng chục vai trò và phân cấp nhiều tầng. Riêng về độ phức tạp tính toán, phân tích ở mục~\ref{sec:buoc3} cho thấy chi phí lan truyền quyền tăng tuyến tính theo chiều cao phân cấp, nên đây là lập luận thiết kế chứ chưa phải bằng chứng thực nghiệm.
+  \item Tính độc lập với công nghệ nêu ở mục~\ref{sec:tinh-chat} vẫn là lập luận dựa trên thiết kế. Bằng chứng gián tiếp duy nhất là Nhận xét~\ref{nx:mau-sinh-nho}: phần mã phụ thuộc nền tảng đích chỉ chiếm 13\% tổng quy mô. Việc kiểm chứng thật đòi hỏi viết bộ mẫu thứ hai cho một nền tảng khác.
+  \item Ca nghiên cứu do chính tác giả mô hình hóa nên có thể vô tình tránh những cấu trúc mà bộ phân tích không xử lý được.
+\end{itemize}
+
+\paragraph{Nguy cơ về tính hợp lệ cấu trúc khái niệm.}
+Ba thước đo được dùng đều là proxy, và mỗi proxy có giới hạn riêng. Số dòng mã là proxy yếu cho công sức phát triển: nó không phản ánh phần khó nhất của công việc là suy nghĩ thiết kế. ``Biên dịch sạch'' là proxy yếu cho tính đúng đắn: mã biên dịch được vẫn có thể sai ngữ nghĩa, và ở đây mã sinh ra còn chứa các thân phương thức để trống. Phép so sánh từng byte ở E4 đo tính trực giao \emph{về văn bản}, mạnh hơn so sánh về cấu trúc nhưng vẫn không đảm bảo trực giao \emph{về ngữ nghĩa}.
+
+\paragraph{Nguy cơ về tính hợp lệ kết luận.}
+Mọi số liệu trong chương là kết quả của một lần đo trên một cấu hình, không có lặp lại và không có thống kê suy diễn. Với các phép đo tất định -- số tệp, số dòng, số lỗi biên dịch, kết quả so sánh cây thư mục -- điều này không ảnh hưởng, vì lặp lại cho kết quả hệt nhau, và tính idempotent đã được kiểm chứng ở E3. Riêng thời gian chạy phụ thuộc máy đo nên chỉ có giá trị chỉ báo bậc độ lớn. Ngoài ra, phần đánh giá mức dễ hiểu chưa có dữ liệu người dùng nên kết luận về RQ4 chỉ dựa trên nửa số thước đo đã thiết kế.
 
 \section{Tổng kết chương}
 \label{sec:tong-ket-c4}
+
+Chương này đã hiện thực hóa phương pháp của Chương~\ref{ch:phuong-phap} thành công cụ \texttt{ddd-codegen} với quy mô 4.557 dòng, rồi đánh giá trên ca nghiên cứu CourseMan qua sáu thí nghiệm.
+
+Về mặt đạt được: quy trình năm bước chạy trọn vẹn trong một lượt và sinh ra 31 tệp mã có cấu trúc đúng với ánh xạ đã thiết kế; thuật toán lan truyền quyền cho kết quả đúng trên phân cấp vai trò của ca nghiên cứu; tính idempotent được xác nhận bằng phép so sánh toàn bộ cây thư mục; và tính trực giao được xác nhận ở mức mạnh nhất có thể đo -- lược bỏ toàn bộ mối quan tâm kiểm soát truy cập không làm thay đổi một byte nào của ba tầng dưới. Về năng suất, phương pháp cho tỷ lệ khuếch đại khoảng bảy lần, và quan trọng hơn, giới hạn phạm vi ảnh hưởng của một thay đổi chính sách vào ba tệp xác định trước.
+
+Về mặt chưa đạt: bộ phân tích ở bước~1 mới nhận một tập con của cú pháp cụ thể đã đặc tả, khiến bốn bất biến RBAC$_2$ không đánh giá được và ba trong bốn đột biến không bị phát hiện; vi phạm bất biến chưa được dùng làm điều kiện chặn bước sinh mã; quan hệ truy vết ngược mới đạt mức phần tử mô hình chứ chưa tới mức dòng; và mã sinh ra còn 45 lỗi biên dịch thuộc bốn nhóm nguyên nhân kỹ thuật. Phân tích ở mục~\ref{subsec:nguyen-nhan-goc} cho thấy phần lớn các hạn chế này quy về một nguyên nhân gốc duy nhất, và sáu trong tám hạn chế thuộc về cài đặt chứ không đụng tới thiết kế của phương pháp.
+
+Kết quả tổng thể: phương pháp được kiểm chứng khả thi ở phần RBAC$_0$ và RBAC$_1$ -- đúng phạm vi mà mục~\ref{sec:muc-tieu} tuyên bố hỗ trợ đầy đủ; phần RBAC$_2$ mới dừng ở mức đặc tả được, chưa kiểm chứng được. Phần Kết luận tiếp theo tổng kết đóng góp của luận văn và nêu hướng phát triển dựa trên chính các hạn chế đã đo được ở chương này.

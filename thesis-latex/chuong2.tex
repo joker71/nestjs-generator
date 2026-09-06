@@ -1,59 +1,82 @@
 \chapter{CƠ SỞ LÝ THUYẾT VÀ TỔNG QUAN TÌNH HÌNH NGHIÊN CỨU}
 \label{ch:co-so-ly-thuyet}
 
-Chương này trình bày cơ sở lý thuyết và tổng quan tình hình nghiên cứu liên quan tới luận văn. Mục~\ref{sec:ddd} trình bày nền tảng thiết kế hướng miền. Mục~\ref{sec:dsl} trình bày ngôn ngữ chuyên biệt miền và hướng tiếp cận dựa vào chú thích. Mục~\ref{sec:rbac} trình bày mô hình kiểm soát truy cập dựa trên vai trò. Mục~\ref{sec:uml-ocl} trình bày các chuẩn mô hình hóa hình thức và công cụ kiểm chứng. Mục~\ref{sec:tich-hop} khảo sát các hướng tiếp cận tích hợp mối quan tâm vào mô hình miền và các kỹ thuật chuyển đổi mô hình. Mục~\ref{sec:tong-ket-c2} tổng kết chương và định vị nghiên cứu của luận văn.
+Bài toán đặc tả và tích hợp kiểm soát truy cập vào mô hình miền nằm ở giao điểm của bốn dòng tri thức, và không dòng nào trong số đó tự mình giải quyết được bài toán. Thiết kế hướng miền cho biết mô hình miền phải là trung tâm của phần mềm và phải \emph{sinh được} phần mềm, nhưng không nói kiểm soát truy cập đứng ở đâu trong mô hình đó. Lý thuyết ngôn ngữ chuyên biệt miền cho biết một ngôn ngữ cần được định nghĩa qua ba thành phần và các ngôn ngữ theo mối quan tâm có thể hợp nhất với nhau, nhưng chưa có ngôn ngữ nào trong mạch DDD dành cho kiểm soát truy cập. Mô hình RBAC có ngữ nghĩa hình thức chuẩn hóa từ ba thập kỷ, nhưng các công trình biểu diễn nó bằng UML/OCL đều xem chính sách là một hệ thống độc lập để phân tích, không gắn với mô hình miền của một ứng dụng và không sinh mã. Cuối cùng, kỹ nghệ hướng mô hình cung cấp chuẩn ký pháp, công cụ kiểm chứng và kỹ thuật chuyển đổi, nhưng chỉ ở dạng khối xây dựng tổng quát.
 
-\section{Tổng quan về thiết kế hướng miền}
+Chương này trình bày bốn dòng tri thức đó đúng ở mức luận văn cần dùng, với một nguyên tắc xuyên suốt: mỗi khái niệm được đặt cạnh các hướng tiếp cận hiện có, được phân tích về mặt mạnh và giới hạn, rồi được gắn với chỗ nó có ý nghĩa đối với bài toán. Cách trình bày như vậy làm cho khoảng trống nghiên cứu hiện ra một cách tự nhiên ở cuối chương: các công trình về RBAC có ngữ nghĩa hình thức nhưng đứng ngoài mô hình miền; các công trình an toàn hướng mô hình có sinh mã nhưng đứng ngoài khung hợp nhất mối quan tâm; mạch aDSL có khung hợp nhất nhưng chưa đặc tả mối quan tâm bảo mật thành một ngôn ngữ đầy đủ. Chính khoảng trống đó là điểm xuất phát của luận văn.
+
+\section{Thiết kế hướng miền: mô hình miền làm trung tâm, ngữ cảnh giới hạn và kiến trúc phân tầng}
 \label{sec:ddd}
 
-\subsection{Nền tảng thiết kế hướng miền}
+\subsection{Mô hình miền, ngôn ngữ chung và hai yêu cầu khả thi -- thỏa mãn}
 
-Thiết kế hướng miền \cite{evans2003} xuất phát từ một quan sát: phần lớn độ phức tạp của phần mềm nghiệp vụ không nằm ở kỹ thuật mà ở bản thân miền vấn đề. Do đó, giá trị cốt lõi của thiết kế là xây dựng được một mô hình miền diễn đạt trung thực tri thức nghiệp vụ và được cả chuyên gia miền lẫn lập trình viên cùng hiểu.
+Thiết kế hướng miền (Domain-Driven Design -- DDD) \cite{evans2003} xuất phát từ một quan sát đã được thực tiễn xác nhận: phần lớn độ phức tạp của phần mềm nghiệp vụ không nằm ở kỹ thuật mà ở bản thân miền vấn đề. Do đó, giá trị cốt lõi của thiết kế là xây dựng được một \emph{mô hình miền} (Domain Model -- DM) diễn đạt trung thực tri thức nghiệp vụ và được cả chuyên gia miền lẫn lập trình viên cùng hiểu. Evans nhấn mạnh rằng DM không phải tài liệu phân tích để đọc rồi cất đi, mà phải gắn chặt với cài đặt và chi phối việc phát triển phần mềm trong suốt vòng đời. Điều này bao hàm hai yêu cầu đối với DM: nó phải \emph{đủ giàu ngữ nghĩa} để phản ánh đúng bản chất nghiệp vụ, và phải \emph{đủ cấu trúc} để định hướng được mã nguồn.
 
-Hai khái niệm chiến lược quan trọng nhất là ngôn ngữ chung và ngữ cảnh giới hạn. \emph{Ngôn ngữ chung} là tập thuật ngữ thống nhất, được dùng đồng thời trong trao đổi, trong tài liệu và trong mã nguồn; khi một khái niệm nghiệp vụ đổi tên thì tên lớp trong mã cũng phải đổi theo. \emph{Ngữ cảnh giới hạn} là ranh giới trong đó một DM và ngôn ngữ chung của nó có hiệu lực; cùng một từ có thể mang nghĩa khác nhau ở hai ngữ cảnh khác nhau, và ranh giới rõ ràng cho phép mỗi mô hình giữ được tính nhất quán nội tại.
+Hai yêu cầu đó được diễn đạt lại thành hai đặc trưng mà một DM theo DDD phải có \cite{evans2003,vernon2013}. Đặc trưng thứ nhất là \emph{tính khả thi}: DM phải chuyển được thành mã nguồn và ngược lại, mã nguồn phải đọc ngược được về DM; một mô hình đẹp trên giấy nhưng không có đường đi tới mã là mô hình không khả thi. Đặc trưng thứ hai là \emph{tính thỏa mãn}: DM phải phản ánh đúng yêu cầu nghiệp vụ bằng một ngôn ngữ được phát triển và tinh chỉnh cùng các bên liên quan. Đạt đồng thời hai đặc trưng này là trọng tâm của các nghiên cứu về DDD, và cũng là thước đo mà mọi kỹ thuật biểu diễn DM phải chịu.
 
-Ngữ cảnh giới hạn có ý nghĩa đặc biệt đối với luận văn: nó vừa là đơn vị phân rã của DM, vừa là đơn vị phân rã của kiến trúc đích, và cũng chính là phạm vi hiệu lực tự nhiên của một tập vai trò trong chính sách kiểm soát truy cập.
+Để duy trì sự tương thích giữa mô hình và hiện thực, DDD dựa trên hai nguyên lý chiến lược. \emph{Ngôn ngữ chung} (Ubiquitous Language -- UL) là tập thuật ngữ thống nhất, được dùng đồng thời trong trao đổi, trong tài liệu và trong mã nguồn; khi một khái niệm nghiệp vụ đổi tên thì tên lớp trong mã cũng phải đổi theo, và ngược lại, một lớp không có tên trong ngôn ngữ nghiệp vụ là dấu hiệu mô hình đã lệch khỏi miền. \emph{Ngữ cảnh giới hạn} (bounded context) là ranh giới trong đó một DM và ngôn ngữ chung của nó có hiệu lực; cùng một từ có thể mang nghĩa khác nhau ở hai ngữ cảnh khác nhau, và ranh giới rõ ràng cho phép mỗi mô hình giữ được tính nhất quán nội tại thay vì phải dung hòa mọi nghĩa trong một mô hình khổng lồ.
 
-\subsection{Mô hình miền hướng thực thi}
+Ngữ cảnh giới hạn có ý nghĩa đặc biệt đối với bài toán của luận văn, vì nó đồng thời là ba loại đơn vị phân rã: đơn vị phân rã của DM, đơn vị phân rã của kiến trúc đích trong các kiến trúc dịch vụ hiện đại, và -- điều mà tài liệu DDD ít nhắc tới nhưng rất tự nhiên -- phạm vi hiệu lực của một tập vai trò trong chính sách kiểm soát truy cập. Một vai trò ``cán bộ ghi danh'' chỉ có nghĩa trong ngữ cảnh ghi danh, cũng như khái niệm ``sinh viên'' trong ngữ cảnh đó mang nghĩa khác với ``sinh viên'' trong ngữ cảnh tài chính.
 
-Ở mức chiến thuật, DDD cung cấp một bộ khuôn mẫu để cấu trúc DM \cite{evans2003,vernon2013}. Bảng~\ref{tab:khuon-mau-ddd} tóm tắt các khuôn mẫu được luận văn sử dụng.
+Một điểm yếu về phương pháp luận cần được nêu ngay ở đây. Mặc dù DDD yêu cầu UL xuyên suốt từ phân tích tới cài đặt, phương pháp gốc \emph{không cung cấp cơ chế kỹ thuật} để hình thức hóa UL và chuyển nó một cách có hệ thống vào mã nguồn. Trong thực tiễn, DM thường được mô tả bằng biểu đồ UML kèm ràng buộc OCL, bằng tài liệu văn bản hoặc chỉ bằng trao đổi miệng, rồi được lập trình viên hiện thực thủ công. Sau vài chu kỳ phát triển, UL trong tài liệu và UL trong mã phân kỳ. Khoảng cách này chính là động lực của toàn bộ mạch nghiên cứu về ngôn ngữ chuyên biệt miền cho DDD được trình bày ở mục~\ref{sec:dsl}.
+
+\subsection{Các khuôn mẫu chiến thuật và kiến trúc bốn tầng giữ tầng miền thuần khiết}
+
+Ở mức chiến thuật, DDD cung cấp một bộ khuôn mẫu để cấu trúc DM \cite{evans2003,vernon2013}. Bảng~\ref{tab:khuon-mau-ddd} tóm tắt các khuôn mẫu được luận văn sử dụng cùng vai trò của từng khuôn mẫu đối với việc sinh mã.
 
 \begin{table}[htbp]
 \centering
 \caption{Các khuôn mẫu chiến thuật của DDD được sử dụng trong luận văn}
 \label{tab:khuon-mau-ddd}
 \small
-\begin{tabularx}{\textwidth}{@{}lX@{}}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
 \toprule
-\textbf{Khuôn mẫu} & \textbf{Ý nghĩa} \\
+\textbf{Khuôn mẫu} & \textbf{Ý nghĩa} & \textbf{Vai trò khi sinh mã} \\
 \midrule
-Thực thể (entity) & Đối tượng có định danh riêng, tồn tại xuyên suốt vòng đời dù thuộc tính thay đổi. \\
-Đối tượng giá trị (value object) & Đối tượng bất biến, được xác định bởi giá trị chứ không bởi định danh. \\
-Gốc tụ hợp (aggregate root) & Thực thể đóng vai trò cửa ngõ của một tụ hợp, bảo đảm bất biến nghiệp vụ của cả tụ hợp; là đơn vị nhất quán của giao dịch. \\
-Kho lưu trữ (repository) & Giao diện truy xuất tụ hợp, tách DM khỏi cơ chế lưu trữ cụ thể. \\
-Dịch vụ miền (domain service) & Thao tác nghiệp vụ không thuộc riêng một thực thể nào, thường trải rộng trên nhiều tụ hợp. \\
-Sự kiện miền (domain event) & Sự kiện có ý nghĩa nghiệp vụ đã xảy ra, dùng để truyền tin giữa các phần của hệ thống. \\
+Thực thể (entity) & Đối tượng có định danh riêng, tồn tại xuyên suốt vòng đời dù thuộc tính thay đổi. & Lớp có trường định danh và vết thời gian; chịu ràng buộc bất biến. \\
+Đối tượng giá trị (value object) & Đối tượng bất biến, được xác định bởi giá trị chứ không bởi định danh. & Lớp bất biến, so sánh theo giá trị, không có kho lưu trữ riêng. \\
+Gốc tụ hợp (aggregate root) & Thực thể đóng vai trò cửa ngõ của một tụ hợp, bảo đảm bất biến nghiệp vụ của cả tụ hợp; đơn vị nhất quán của giao dịch. & Điểm vào duy nhất của tụ hợp; nơi gắn kho lưu trữ, điểm cuối và phép kiểm tra quyền. \\
+Kho lưu trữ (repository) & Giao diện truy xuất tụ hợp, tách DM khỏi cơ chế lưu trữ cụ thể. & Giao diện ở tầng miền, hiện thực ở tầng hạ tầng. \\
+Dịch vụ miền (domain service) & Thao tác nghiệp vụ không thuộc riêng một thực thể nào, thường trải rộng trên nhiều tụ hợp. & Lớp không trạng thái ở tầng miền. \\
+Sự kiện miền (domain event) & Sự kiện có ý nghĩa nghiệp vụ đã xảy ra, dùng để truyền tin giữa các phần của hệ thống. & Lớp dữ liệu bất biến được phát ra từ gốc tụ hợp. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Khái niệm \emph{mô hình miền hướng thực thi} nhấn mạnh rằng DM không chỉ là bản vẽ mô tả mà còn phải mang đủ thông tin để sinh ra phần mềm chạy được \cite{le2018dcsl,levanvinh2026}. Điều này đặt ra yêu cầu về độ giàu ngữ nghĩa của DM: ngoài cấu trúc, mô hình còn phải biểu diễn được hành vi, ràng buộc nghiệp vụ và -- trong phạm vi luận văn này -- cả chính sách kiểm soát truy cập.
+Để giữ DM độc lập với hạ tầng, DDD khuyến nghị tổ chức mã nguồn theo bốn tầng như Hình~\ref{fig:kien-truc-bon-tang} \cite{evans2003,vernon2013}. \emph{Tầng miền} chứa lớp miền và quy tắc nghiệp vụ thuần túy, không phụ thuộc vào bất kỳ công nghệ nào. \emph{Tầng ứng dụng} điều phối các ca sử dụng: nhận yêu cầu, gọi các thao tác của tầng miền theo đúng thứ tự, mở và đóng giao dịch, nhưng bản thân nó không chứa quy tắc nghiệp vụ. \emph{Tầng hạ tầng} hiện thực hóa các giao diện kỹ thuật mà tầng miền khai báo -- kho lưu trữ, truyền tin, tích hợp hệ thống ngoài. \emph{Tầng trình diễn} tiếp nhận yêu cầu từ bên ngoài và trả kết quả. Chiều phụ thuộc chỉ đi từ trên xuống: tầng miền không biết gì về ba tầng còn lại.
 
-Để giữ DM độc lập với hạ tầng, DDD khuyến nghị tổ chức mã nguồn theo bốn tầng \cite{vernon2013}: \emph{tầng miền} chứa lớp miền và quy tắc nghiệp vụ thuần túy; \emph{tầng ứng dụng} điều phối các ca sử dụng; \emph{tầng hạ tầng} hiện thực hóa các giao diện kỹ thuật; và \emph{tầng trình bày} tiếp nhận yêu cầu từ bên ngoài. Vị trí của kiểm soát truy cập trong kiến trúc này là một quyết định thiết kế đáng lưu ý: điểm kiểm soát nên đặt ở tầng trình bày và tầng ứng dụng, còn tầng miền phải được giữ thuần khiết -- đây chính là điều kiện bảo đảm tính trực giao giữa mối quan tâm kiểm soát truy cập và mối quan tâm cấu trúc.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{hinh/hinh-kien-truc-bon-tang.pdf}
+\caption{Kiến trúc bốn tầng của DDD và vị trí của điểm kiểm soát truy cập}
+\label{fig:kien-truc-bon-tang}
+\end{figure}
 
-\section{Ngôn ngữ chuyên biệt miền}
+Vị trí của kiểm soát truy cập trong kiến trúc này là một quyết định thiết kế có hệ quả sâu. Nếu phép kiểm tra quyền được đặt trong tầng miền, lớp miền sẽ phải biết về người dùng, phiên và vai trò -- những khái niệm không thuộc ngôn ngữ nghiệp vụ -- và tính thuần khiết của DM bị phá vỡ. Nếu đặt ở tầng hạ tầng, phép kiểm tra sẽ nằm xa khỏi ý nghĩa nghiệp vụ của thao tác được bảo vệ. Vị trí hợp lý là ranh giới giữa tầng trình diễn và tầng ứng dụng: mọi yêu cầu đều đi qua đó trước khi chạm tới DM, nên đây là nơi duy nhất có thể bảo đảm không có đường đi nào lọt khỏi kiểm soát. Giữ tầng miền thuần khiết còn là \emph{điều kiện} để mối quan tâm kiểm soát truy cập trực giao với mối quan tâm cấu trúc: có thể thêm hay bớt chính sách mà không chạm tới lớp miền.
+
+\subsection{Mô hình miền hướng thực thi: từ bản vẽ mô tả tới mô hình sinh được phần mềm}
+
+Trong nhiều hệ thống hiện nay, DM chủ yếu đóng vai trò \emph{mô tả}: nó tồn tại dưới dạng biểu đồ để thảo luận và thống nhất, còn phần mềm được viết riêng. Khái niệm \emph{mô hình miền hướng thực thi} đảo lại quan hệ đó: DM phải mang đủ thông tin để sinh ra phần mềm chạy được, hoặc thậm chí được thực thi trực tiếp \cite{le2018dcsl,le2020}. Yêu cầu này đặt ra một tiêu chuẩn về độ giàu ngữ nghĩa mà một DM mô tả không cần đạt: ngoài cấu trúc, mô hình phải biểu diễn được hành vi, ràng buộc nghiệp vụ và -- trong phạm vi luận văn -- cả chính sách kiểm soát truy cập, theo cách mà một bộ chuyển đổi tự động đọc hiểu được.
+
+Các nghiên cứu về DM hướng thực thi đã đi theo hai hướng chính. Hướng \emph{trực tiếp} nhúng DM vào một ngôn ngữ lập trình hướng đối tượng như Java hoặc C\#, dùng chính cấu trúc lớp của ngôn ngữ chủ làm biểu diễn DM; các khung như Apache Isis \cite{causeway2025} hay OpenXava \cite{openxava2025} là những ví dụ tiêu biểu, trong đó chú thích (annotation) gắn trên lớp và thuộc tính cung cấp đủ thông tin để khung sinh giao diện và tầng lưu trữ lúc chạy. Ưu điểm là phần mềm chạy được ngay và không có khoảng cách giữa mô hình và mã; nhược điểm là DM dễ bị pha tạp bởi chi tiết kỹ thuật của ngôn ngữ chủ, và mọi mối quan tâm -- cấu trúc, hành vi, ràng buộc, bảo mật -- cùng chen chúc trong một lớp. Hướng \emph{gián tiếp} đi theo kỹ nghệ hướng mô hình: DM được đặc tả bằng UML/OCL hoặc bằng các DSL bổ trợ, rồi được chuyển thành chương trình bằng các phép chuyển đổi mô hình. Ưu điểm là mô hình giữ được mức trừu tượng cao và độc lập với nền tảng; nhược điểm là chuỗi chuyển đổi dài, và nếu không được thiết kế cẩn thận thì ngữ nghĩa nghiệp vụ mất mát dọc đường.
+
+Mạch nghiên cứu về DDD của nhóm nghiên cứu tại VNU-UET \cite{le2018dcsl,le2020,dang2023agl,le2025udml} chọn một con đường ở giữa: DM được đặc tả bằng các ngôn ngữ chuyên biệt miền dựa vào chú thích, giữ được ưu điểm ``đặc tả nằm ngay trong ngữ cảnh của lớp miền'' của hướng trực tiếp, đồng thời có siêu mô hình và bộ chuyển đổi tường minh của hướng gián tiếp. Mục~\ref{sec:dsl} trình bày mạch nghiên cứu này. Điều cần ghi nhận ở đây là một khoảng trống chung của cả hai hướng: trong khi cấu trúc và ở mức độ thấp hơn là hành vi đã được đưa vào DM hướng thực thi, \emph{chính sách kiểm soát truy cập vẫn nằm ngoài mô hình} -- được cài đặt bằng cấu hình khung hoặc bằng mã thủ công ở tầng hạ tầng, không được kiểm chứng ở giai đoạn thiết kế và không được sinh từ cùng một nguồn với phần còn lại của phần mềm.
+
+\section{Ngôn ngữ chuyên biệt miền: ba thành phần, siêu mô hình hóa và hướng tiếp cận dựa vào chú thích}
 \label{sec:dsl}
 
-\subsection{Khái niệm và phân loại}
+\subsection{DSL nội sinh, DSL ngoại sinh và vai trò của mô hình ngữ nghĩa}
 
-Ngôn ngữ chuyên biệt miền là ngôn ngữ máy tính có sức biểu đạt hạn chế, tập trung vào một miền cụ thể \cite{fowler2010}. Đổi lại sự hạn chế đó, DSL cho phép diễn đạt bài toán bằng chính khái niệm của miền, ngắn gọn và dễ kiểm chứng hơn so với ngôn ngữ lập trình đa dụng.
+Ngôn ngữ chuyên biệt miền (Domain-Specific Language -- DSL) là ngôn ngữ máy tính có sức biểu đạt hạn chế, tập trung vào một miền cụ thể \cite{fowler2010,mernik2005}. Đổi lại sự hạn chế đó, DSL cho phép diễn đạt bài toán bằng chính khái niệm của miền, ngắn gọn hơn và dễ kiểm chứng hơn so với ngôn ngữ lập trình đa dụng. Mernik và cộng sự \cite{mernik2005} hệ thống hóa quyết định phát triển một DSL theo bốn giai đoạn -- quyết định, phân tích, thiết kế, cài đặt -- và chỉ ra rằng lợi ích của DSL chỉ bù được chi phí xây dựng khi miền đủ ổn định và đủ hẹp để ngữ nghĩa của nó được đặc tả tường minh. Kiểm soát truy cập dựa trên vai trò thỏa mãn cả hai điều kiện: mô hình RBAC đã được chuẩn hóa từ lâu, và tập khái niệm của nó nhỏ, đóng.
 
-Fowler \cite{fowler2010} phân biệt \emph{DSL nội sinh} được nhúng trong cú pháp của một ngôn ngữ chủ, và \emph{DSL ngoại sinh} có cú pháp riêng cùng bộ phân tích riêng. Một khái niệm then chốt khác là \emph{mô hình ngữ nghĩa} (semantic model): cấu trúc dữ liệu trung gian mà bộ phân tích tạo ra và bộ sinh mã tiêu thụ. Việc tách bạch mô hình ngữ nghĩa khỏi cú pháp cho phép thay đổi cú pháp mà không ảnh hưởng phần sinh mã, và ngược lại.
+Fowler \cite{fowler2010} phân biệt hai loại DSL theo quan hệ với ngôn ngữ chủ. \emph{DSL ngoại sinh} có cú pháp riêng và bộ phân tích riêng, tồn tại độc lập với mọi ngôn ngữ lập trình; nhờ đó nó phù hợp cho phân tích ở mức trừu tượng cao, chuyển đổi giữa nhiều DSL và kiểm chứng ngữ nghĩa có hệ thống, nhưng đòi hỏi xây dựng toàn bộ hệ công cụ từ đầu. \emph{DSL nội sinh} được nhúng trong cú pháp của một ngôn ngữ chủ, tận dụng bộ phân tích, trình soạn thảo và cơ chế kiểm tra kiểu sẵn có; nó dễ tích hợp với mã nguồn nhưng bị giới hạn bởi những gì cú pháp ngôn ngữ chủ cho phép diễn đạt. Trong bối cảnh DDD, cả hai loại đều đã được dùng: biểu đồ lớp UML kèm OCL là một dạng DSL ngoại sinh cho DM, còn chú thích trên lớp Java là DSL nội sinh.
 
-\subsection{Phương pháp biểu diễn bằng siêu mô hình hóa}
+Một khái niệm then chốt khác của Fowler là \emph{mô hình ngữ nghĩa} (semantic model): cấu trúc dữ liệu trung gian mà bộ phân tích tạo ra và bộ sinh mã tiêu thụ. Việc tách bạch mô hình ngữ nghĩa khỏi cú pháp cho phép thay đổi cú pháp mà không ảnh hưởng phần sinh mã, và ngược lại; nó cũng cho phép \emph{một} mô hình ngữ nghĩa có \emph{nhiều} cú pháp cụ thể -- văn bản, đồ họa, hay chú thích -- cùng tồn tại. Đối với luận văn, mô hình ngữ nghĩa chính là nơi ba mối quan tâm cấu trúc, hành vi và kiểm soát truy cập gặp nhau, và cũng là nơi bước kiểm chứng thao tác.
+
+\subsection{Ba thành phần của một ngôn ngữ và phương pháp siêu mô hình hóa}
 \label{subsec:ba-thanh-phan}
 
-Voelter và cộng sự \cite{voelter2013} hệ thống hóa quy trình xây dựng DSL quanh ba thành phần. Đây cũng là khung trình bày mà Chương~\ref{ch:phuong-phap} tuân theo, và phù hợp với cách các công trình của nhóm nghiên cứu định nghĩa DCSL, AGL và RBACDom \cite{le2018dcsl,dang2023agl,levanvinh2026}.
+Voelter và cộng sự \cite{voelter2013} hệ thống hóa quy trình xây dựng DSL quanh ba thành phần, và đây cũng là khung mà các công trình của nhóm nghiên cứu dùng để định nghĩa DCSL, AGL và UDML \cite{le2018dcsl,dang2023agl,le2025udml}:
 
 \begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
   \item \textbf{Cú pháp trừu tượng}: tập khái niệm của ngôn ngữ cùng quan hệ giữa chúng, được đặc tả bằng một \emph{siêu mô hình} (Abstract Syntax Meta-Model -- ASM). Đây là phần lõi của ngôn ngữ, độc lập với cách viết.
@@ -62,28 +85,97 @@ Voelter và cộng sự \cite{voelter2013} hệ thống hóa quy trình xây d�
 \end{enumerate}
 
 \begin{nhanxet}
-Cách phân chia này giải thích vì sao một DSL không đồng nghĩa với một bộ sinh mã. Bộ sinh mã chỉ hiện thực hóa ngữ nghĩa động; phần giá trị lâu dài của một DSL nằm ở siêu mô hình cú pháp trừu tượng và ngữ nghĩa tĩnh -- những thành phần độc lập với công nghệ đích và tái sử dụng được khi nền tảng thay đổi.
+Cách phân chia này giải thích vì sao một DSL không đồng nghĩa với một bộ sinh mã. Bộ sinh mã chỉ hiện thực hóa ngữ nghĩa động; phần giá trị lâu dài của một DSL nằm ở siêu mô hình cú pháp trừu tượng và ngữ nghĩa tĩnh -- những thành phần độc lập với công nghệ đích và tái sử dụng được khi nền tảng thay đổi. Một ngôn ngữ chỉ có cú pháp cụ thể và bộ sinh mã, không có siêu mô hình và quy tắc hợp lệ, thì không kiểm chứng được và không mở rộng được.
 \end{nhanxet}
 
-\subsection{Ngôn ngữ chuyên biệt miền dựa vào chú thích và kiến trúc MOSA}
+Siêu mô hình được định nghĩa trong một khung siêu mô hình hóa chuẩn. Trong kỹ nghệ hướng mô hình, chuẩn được dùng rộng rãi nhất là MOF của OMG \cite{omg2019mof} và hiện thực phổ biến của nó là Ecore trong Eclipse Modeling Framework \cite{steinberg2008}. Việc đặt DSL trên một khung siêu mô hình hóa chuẩn mang lại ba lợi ích \cite{brambilla2017}. Thứ nhất, \emph{bảo toàn ngữ nghĩa} khi chuyển đổi: mọi phép chuyển đổi đều vận hành trên cấu trúc đã được đặc tả tường minh, nên không có chỗ cho suy diễn ngầm. Thứ hai, \emph{kiểm tra được tính hợp lệ}: siêu mô hình cùng các ràng buộc gắn với nó cho phép phát hiện mô hình sai ở mức cú pháp và ngữ nghĩa tĩnh trước khi làm bất cứ việc gì khác. Thứ ba, siêu mô hình là \emph{cầu nối} để mô hình trở thành một phần của hệ thống chạy được thông qua các bộ chuyển đổi. Ba lợi ích này chính là ba lý do khiến một ngôn ngữ đặc tả chính sách kiểm soát truy cập phải bắt đầu từ siêu mô hình chứ không phải từ cú pháp.
+
+\subsection{aDSL, DCSL và kiến trúc phần mềm dựa vào mô-đun}
 \label{subsec:adsl}
 
-Hướng tiếp cận aDSL \cite{le2018dcsl} chọn cú pháp cụ thể là các chú thích (annotation) gắn trực tiếp lên phần tử của ngôn ngữ lập trình chủ. Ưu điểm là đặc tả nằm ngay cạnh mã nguồn và dùng lại được hệ công cụ sẵn có của ngôn ngữ chủ; đặc tả và mã không bao giờ nằm ở hai nơi tách rời.
+Hướng tiếp cận \emph{ngôn ngữ chuyên biệt miền dựa vào chú thích} (annotation-based DSL -- aDSL) \cite{le2018dcsl} chọn cú pháp cụ thể là các chú thích gắn trực tiếp lên phần tử của ngôn ngữ lập trình chủ. Trong bối cảnh DDD, aDSL có ba đặc điểm khiến nó phù hợp hơn các DSL ngoại sinh thuần túy. Một là, ngữ nghĩa miền gắn \emph{ngay tại chỗ}: mỗi chú thích vừa diễn đạt ý nghĩa nghiệp vụ cho người đọc, vừa cung cấp thông tin cho công cụ chuyển đổi. Hai là, khoảng cách mô hình -- mã bị triệt tiêu về mặt vật lý: DM và mã là cùng một tệp, nên không thể phân kỳ. Ba là, bản mẫu phần mềm sinh được trực tiếp từ chú thích mà không cần lớp mô hình trung gian tách rời. Đổi lại, đặc tả chỉ đọc được bởi người biết ngôn ngữ chủ, và mọi mối quan tâm cùng nằm trong một lớp -- hai điểm mà mục~\ref{sec:tich-hop} sẽ quay lại.
 
-\textbf{DCSL} \cite{le2018dcsl,le2020} là aDSL cho mối quan tâm cấu trúc, với ba khái niệm chính: \texttt{DClass} biểu diễn lớp miền cùng thuộc tính khả biến; \texttt{DAttr} biểu diễn thuộc tính miền cùng các ràng buộc như bắt buộc, độ dài, khóa định danh; và \texttt{DAssoc} biểu diễn liên kết giữa các lớp miền cùng loại liên kết và bội số. DCSL đi kèm kiến trúc phần mềm dựa vào mô-đun (Module-based Software Architecture -- MOSA), trong đó mỗi lớp miền tương ứng một mô-đun phần mềm hoàn chỉnh.
+\textbf{DCSL} (Domain Class Specification Language) \cite{le2018dcsl,le2020} là aDSL cho mối quan tâm cấu trúc. Siêu mô hình của nó gồm bốn siêu khái niệm chính: \texttt{DClass} biểu diễn lớp miền cùng thuộc tính khả biến; \texttt{DAttr} biểu diễn thuộc tính miền cùng các ràng buộc; \texttt{DAssoc} biểu diễn liên kết giữa các lớp miền cùng loại liên kết và bội số; và \texttt{DOpt} biểu diễn phương thức miền cùng loại thao tác. Điểm đáng chú ý về phương pháp là DCSL không cố gắng biểu diễn toàn bộ OCL; nó xác định một tập \emph{ràng buộc thiết yếu} -- những ràng buộc xuất hiện trong hầu hết mọi DM -- và biểu diễn chúng bằng thuộc tính của chú thích thay vì bằng biểu thức OCL rời. Bảng~\ref{tab:rang-buoc-dcsl} liệt kê các ràng buộc này.
 
-\textbf{AGL} \cite{dang2023agl,le2023kse} bổ sung mối quan tâm hành vi bằng khái niệm đồ thị hoạt động: mỗi ca sử dụng được mô tả bởi một chuỗi hành động có thứ tự, lấy từ biểu đồ hoạt động UML. Điểm quan trọng về mặt phương pháp là AGL không thay thế DCSL mà bổ sung vào cùng một DM -- tiền đề trực tiếp cho ý tưởng hợp nhất nhiều mối quan tâm.
+\begin{table}[htbp]
+\centering
+\caption{Các ràng buộc cấu trúc thiết yếu được DCSL biểu diễn bằng thuộc tính chú thích \cite{le2018dcsl}}
+\label{tab:rang-buoc-dcsl}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Ràng buộc} & \textbf{Kiểu} & \textbf{Ý nghĩa} \\
+\midrule
+Tính khả biến của lớp & Boolean & Đối tượng của lớp có được phép thay đổi sau khi tạo hay không \\
+Tính khả biến của trường & Boolean & Giá trị của trường có thể bị thay đổi hay không \\
+Tính tùy chọn của trường & Boolean & Trường có được phép bỏ trống khi tạo đối tượng hay không \\
+Tính duy nhất của trường & Boolean & Các giá trị của trường có phải duy nhất trong toàn bộ lớp hay không \\
+Trường định danh & Boolean & Trường có phải là định danh của đối tượng hay không \\
+Trường tự sinh & Boolean & Giá trị của trường có do hệ thống tự sinh hay không \\
+Độ dài tối đa & Số & Giới hạn độ dài giá trị của trường \\
+Giá trị tối thiểu, tối đa & Số & Khoảng giá trị hợp lệ của trường \\
+Bội số liên kết & Số & Số đối tượng tối thiểu và tối đa mà một đối tượng được liên kết \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{vidu}
+\label{vd:dcsl}
+Listing~\ref{lst:dcsl} là đặc tả DCSL của lớp \texttt{Student} trong hệ thống CourseMan. Chú thích \texttt{@DAttr(id = true, auto = true)} khai báo \texttt{id} là định danh tự sinh; \texttt{@DAttr(optional = false, length = 30)} khai báo \texttt{name} bắt buộc và không dài quá 30 ký tự; \texttt{@DAssoc} khai báo liên kết một--nhiều với \texttt{Enrolment} kèm bội số. Toàn bộ thông tin cấu trúc mà một bộ sinh mã cần đã nằm trong chính lớp, không có tài liệu nào bên ngoài.
+\end{vidu}
+
+\begin{lstlisting}[caption={Đặc tả DCSL của lớp Student (rút gọn)},label={lst:dcsl}]
+@DClass(mutable = true)
+public class Student {
+  @DAttr(name = "id", id = true, auto = true,
+         type = Type.Integer, mutable = false, optional = false)
+  private int id;
+
+  @DAttr(name = "name", type = Type.String,
+         length = 30, optional = false)
+  private String name;
+
+  @DAttr(name = "enrolments", type = Type.Collection)
+  @DAssoc(ascName = "student-has-enrolments", role = "student",
+          ascType = AssocType.One2Many, endType = AssocEndType.One,
+          associate = @Associate(type = Enrolment.class,
+                                 cardMin = 0, cardMax = 30))
+  private Collection<Enrolment> enrolments;
+  ...
+}
+\end{lstlisting}
+
+DCSL đi kèm \emph{kiến trúc phần mềm dựa vào mô-đun} (Module-based Software Architecture -- MOSA) \cite{le2020}: mỗi lớp miền tương ứng một mô-đun phần mềm hoàn chỉnh theo khuôn mẫu MVC thu nhỏ -- gồm phần mô hình là chính lớp miền, phần trình bày và phần điều khiển được sinh ra -- và phần mềm là một cây các mô-đun như vậy. Kiến trúc này cùng khung cài đặt jDomainApp (JDA) của nhóm là cơ sở để các đặc tả aDSL trở thành phần mềm chạy được. MOSA giải quyết bài toán \emph{hiện thực} DM; nó không đặt ra cơ chế để kiểm chứng rằng một mối quan tâm cắt ngang như kiểm soát truy cập thỏa mãn các ràng buộc an toàn đã đặc tả.
+
+\subsection{AGL: biểu diễn hành vi miền bằng đồ thị hoạt động}
+
+Hành vi miền là thành phần phản ánh cách các khái niệm miền tương tác và tiến hóa trạng thái để hiện thực các quy trình nghiệp vụ. Các hướng biểu diễn hành vi trong bối cảnh DDD có thể xếp thành ba nhóm. Nhóm thứ nhất dùng các biểu đồ hành vi của UML -- biểu đồ hoạt động, trạng thái, tuần tự -- tách rời khỏi biểu đồ lớp \cite{omg2017uml}; biểu đồ trực quan nhưng tồn tại như tài liệu thiết kế độc lập, không gắn với thực thể miền cụ thể, nên khó giữ nhất quán với cấu trúc khi mô hình tiến hóa. Nhóm thứ hai định nghĩa DSL riêng cho hành vi \cite{voelter2013}; các DSL này giàu biểu đạt nhưng thường được thiết kế độc lập với DSL cấu trúc, khiến hành vi và cấu trúc nằm trong hai không gian ngữ nghĩa khác nhau và việc hợp nhất đòi hỏi cơ chế ánh xạ phức tạp. Nhóm thứ ba gắn hành vi vào lớp miền bằng DSL nội sinh; gần với tinh thần DDD nhất, nhưng phần lớn chỉ hỗ trợ thao tác cục bộ hoặc quy ước lập trình, chưa có cơ chế hình thức cho hành vi nghiệp vụ phức hợp.
+
+\textbf{AGL} (Activity Graph Language) \cite{dang2023agl,le2023kse} đặt mình trong nhóm thứ ba nhưng khắc phục giới hạn của nó bằng cách đưa hành vi lên \emph{mức mô hình}. Mỗi ca sử dụng được mô tả bởi một \emph{đồ thị hoạt động}: các nút là hành động mô-đun -- \texttt{open}, \texttt{newObject}, \texttt{setDataFieldValues}, \texttt{createObject}, \texttt{updateObject}, \texttt{deleteObject} -- thao tác trên mô-đun của một lớp miền, còn các cạnh là luồng điều khiển với rẽ nhánh và song song lấy từ biểu đồ hoạt động UML. Ngữ nghĩa của mỗi hành động mô-đun được định nghĩa bằng trạng thái trước và sau trên đối tượng miền, nên đồ thị hoạt động không chỉ là tài liệu mà là đặc tả thực thi được. Công trình tiếp theo \cite{le2023kse} hệ thống hóa các \emph{mẫu hành vi miền} -- những đồ thị con lặp lại trong nhiều ca sử dụng -- để việc đặc tả hành vi ngắn gọn hơn.
+
+Điểm quan trọng về mặt phương pháp là AGL \emph{không thay thế} DCSL mà bổ sung vào cùng một DM: đồ thị hoạt động tham chiếu tới các lớp miền mà DCSL đã khai báo, và hành động mô-đun tham chiếu tới phương thức của các lớp đó. Hai aDSL cùng tồn tại trên một mô hình, mỗi ngôn ngữ phụ trách một mối quan tâm, và liên hệ với nhau bằng tham chiếu chéo -- đây là tiền đề trực tiếp cho ý tưởng hợp nhất nhiều mối quan tâm được trình bày ở mục~\ref{sec:tich-hop}, và cũng là khuôn mẫu mà một ngôn ngữ cho mối quan tâm kiểm soát truy cập nên noi theo.
 
 \begin{nhanxet}
-Luận văn kế thừa tinh thần aDSL nhưng chọn cú pháp cụ thể dạng \emph{văn bản trên biểu đồ lớp} thay vì chú thích trên mã nguồn. Lý do: chính sách kiểm soát truy cập là đối tượng cần được chuyên gia miền và cán bộ quản trị xem xét, nên một ký pháp trực quan có lợi thế hơn chú thích trong mã. Ánh xạ giữa chú thích trong ngôn ngữ chủ và khuôn dập trên biểu đồ là ánh xạ một--một, nên tinh thần aDSL được bảo toàn.
+Luận văn kế thừa tinh thần aDSL nhưng chọn cú pháp cụ thể dạng \emph{văn bản trên biểu đồ lớp} thay vì chú thích trên mã nguồn. Lý do nằm ở đối tượng đọc: chính sách kiểm soát truy cập cần được chuyên gia miền và cán bộ quản trị xem xét, phê duyệt, mà những người này không đọc chú thích Java. Một ký pháp trực quan trên cùng sơ đồ với mô hình miền cho họ nhìn thấy vai trò nào chạm được khái niệm nghiệp vụ nào. Ánh xạ giữa chú thích trong ngôn ngữ chủ và khuôn dập trên biểu đồ là ánh xạ một--một, nên tinh thần ``đặc tả nằm ngay trong ngữ cảnh của lớp miền'' được bảo toàn.
 \end{nhanxet}
 
-\section{Kiểm soát truy cập dựa trên vai trò}
+\section{Kiểm soát truy cập dựa trên vai trò: RBAC$_0$--RBAC$_2$ và các hướng biểu diễn trong mô hình miền}
 \label{sec:rbac}
 
-\subsection{Mô hình cơ sở RBAC$_0$}
+\subsection{Các khái niệm chuẩn của RBAC và mô hình cơ sở RBAC$_0$}
 
-Sandhu và cộng sự \cite{sandhu1996} định nghĩa họ mô hình RBAC gồm bốn cấp. Mô hình cơ sở RBAC$_0$ được phát biểu như sau.
+Kiểm soát truy cập dựa trên vai trò (Role-Based Access Control -- RBAC) \cite{sandhu1996,ferraiolo2001} gắn quyền với \emph{vai trò} phản ánh chức năng công việc trong tổ chức, và gán người dùng vào vai trò thay vì gán quyền trực tiếp cho người dùng. Cách phân tách này đơn giản hóa quản trị -- thay đổi nhân sự chỉ ảnh hưởng phép gán vai trò, thay đổi chính sách chỉ ảnh hưởng phép gán quyền -- hỗ trợ nguyên lý đặc quyền tối thiểu và làm cho chính sách kiểm toán được. Chuẩn NIST \cite{ferraiolo2001} định nghĩa RBAC lõi trên các khái niệm sau:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+  \item \emph{Người dùng} (user): thực thể hoạt động -- con người hoặc hệ thống -- yêu cầu truy cập tới tài nguyên được bảo vệ.
+  \item \emph{Vai trò} (role): chức năng công việc hoặc trách nhiệm trong tổ chức; lớp trừu tượng trung gian giữa người dùng và quyền.
+  \item \emph{Quyền} (permission): sự cho phép thực hiện một \emph{thao tác} trên một \emph{tài nguyên được bảo vệ}. Chuẩn định nghĩa quyền là cặp $\langle$thao tác, tài nguyên$\rangle$ -- một quyền không bao giờ là nhãn trơ.
+  \item \emph{Phiên} (session): ngữ cảnh thời gian chạy trong đó một người dùng kích hoạt một tập con các vai trò đã được gán cho mình; một người dùng có thể mở nhiều phiên với tập vai trò kích hoạt khác nhau.
+  \item \emph{Ràng buộc phân tách nhiệm vụ} (separation of duty -- SoD): ngăn ngừa xung đột lợi ích bằng cách hạn chế việc gán hoặc kích hoạt đồng thời các vai trò xung khắc.
+  \item \emph{Quy tắc truy cập}: một yêu cầu được chấp nhận khi tồn tại một vai trò đang kích hoạt trong phiên hiện tại cung cấp quyền cần thiết, và mọi ràng buộc liên quan đều được thỏa mãn.
+\end{itemize}
+
+Sandhu và cộng sự \cite{sandhu1996} tổ chức các khái niệm này thành họ bốn mô hình tham chiếu RBAC$_0$--RBAC$_3$, trong đó mỗi cấp bổ sung một loại năng lực. Mô hình cơ sở được phát biểu như sau.
 
 \begin{dinhnghia}[RBAC$_0$]
 \label{dn:rbac0}
@@ -97,11 +189,9 @@ Mô hình RBAC$_0$ gồm các tập hợp $U$ (người dùng), $R$ (vai trò), 
 với ràng buộc $\mathit{roles}(s) \subseteq \{\, r \mid (\mathit{user}(s), r) \in UA \,\}$: người dùng chỉ có thể kích hoạt những vai trò đã được gán cho mình.
 \end{dinhnghia}
 
-Điểm cốt lõi của RBAC$_0$ là lớp trung gian vai trò: quyền không gán trực tiếp cho người dùng. Nhờ đó, thay đổi nhân sự chỉ ảnh hưởng quan hệ $UA$, còn thay đổi chính sách chỉ ảnh hưởng quan hệ $PA$ -- hai loại thay đổi được tách bạch.
+Điểm cốt lõi của RBAC$_0$ là lớp trung gian vai trò: quyền không gán trực tiếp cho người dùng. Nhờ đó, hai loại thay đổi -- nhân sự và chính sách -- được tách bạch thành hai quan hệ $UA$ và $PA$. Trong mô hình gốc, quyền được xem là một phần tử trừu tượng của tập $P$; chuẩn NIST cụ thể hóa nó thành cặp thao tác -- tài nguyên nhưng vẫn để ``tài nguyên'' là một đối tượng bất kỳ. Khi đặt RBAC vào bối cảnh DDD, câu hỏi tự nhiên là: tài nguyên được bảo vệ là gì? Câu trả lời của luận văn là \emph{một lớp của mô hình miền} -- và chính lựa chọn này biến quyền từ một nhãn rời rạc thành điểm nối giữa mối quan tâm kiểm soát truy cập và mối quan tâm cấu trúc.
 
-Trong mô hình gốc, quyền được xem là một phần tử trừu tượng của tập $P$. Luận văn tinh chỉnh khái niệm này bằng cách gán cho quyền một cấu trúc nội tại gồm tài nguyên được bảo vệ, thao tác và phạm vi, trong đó tài nguyên là một lớp của DM -- đây chính là điểm nối giữa mối quan tâm kiểm soát truy cập và mối quan tâm cấu trúc, được trình bày chi tiết trong Chương~\ref{ch:phuong-phap}.
-
-\subsection{RBAC$_1$: phân cấp vai trò}
+\subsection{RBAC$_1$: phân cấp vai trò và tập quyền hiệu dụng}
 
 \begin{dinhnghia}[RBAC$_1$]
 \label{dn:rbac1}
@@ -111,11 +201,13 @@ RBAC$_1$ mở rộng RBAC$_0$ bằng quan hệ thứ tự bộ phận $RH \subse
 \]
 \end{dinhnghia}
 
-Vai trò cấp cao thừa hưởng toàn bộ quyền của các vai trò cấp thấp hơn nó trong phân cấp. Quan hệ $RH$ là thứ tự bộ phận nên phải phản xạ, bắc cầu và phản đối xứng; hệ quả thực tiễn quan trọng là đồ thị kế thừa vai trò không được chứa chu trình. Bất biến này được luận văn kiểm tra tường minh ở bước kiểm chứng, vì một chu trình sẽ khiến phép tính $\mathit{perm}^{*}$ mất ý nghĩa thứ tự: mọi vai trò trong chu trình sẽ có cùng tập quyền, tức phân cấp trở nên vô nghĩa.
+Vai trò cấp cao thừa hưởng toàn bộ quyền của các vai trò cấp thấp hơn nó trong phân cấp, nên phân cấp vai trò phản ánh trực tiếp cấu trúc trách nhiệm của tổ chức và giảm đáng kể số phép gán quyền phải khai báo. Quan hệ $RH$ là thứ tự bộ phận nên phải phản xạ, bắc cầu và phản đối xứng. Hệ quả thực tiễn quan trọng nhất là \emph{đồ thị kế thừa vai trò không được chứa chu trình}: nếu có chu trình, mọi vai trò trong chu trình sẽ có cùng tập quyền hiệu dụng, tức phân cấp trở nên vô nghĩa mà không có lỗi nào được báo. Tính không chu trình vì vậy là bất biến bắt buộc của mọi đặc tả phân cấp vai trò, và là bất biến điển hình quyết định được ngay ở mức mô hình.
 
-\subsection{RBAC$_2$: ràng buộc phân tách nhiệm vụ}
+Một hệ quả thứ hai của RBAC$_1$ ít được nêu tường minh: tập quyền hiệu dụng của một vai trò \emph{không đọc được từ khai báo cục bộ}. Muốn biết vai trò $r$ thực sự được làm gì, phải tính bao đóng trên toàn bộ đồ thị kế thừa. Đây là một trong những lý do khiến kiểm soát truy cập khó mô-đun hóa hơn các mối quan tâm cắt ngang khác: thông tin về một phần tử phụ thuộc vào cấu trúc toàn cục.
 
-RBAC$_2$ bổ sung các ràng buộc trên những quan hệ đã có. Ba nhóm ràng buộc được luận văn hỗ trợ như sau.
+\subsection{RBAC$_2$: ràng buộc phân tách nhiệm vụ và ranh giới giữa hai thời điểm kiểm chứng}
+
+RBAC$_2$ bổ sung các ràng buộc trên những quan hệ đã có. Ba nhóm ràng buộc được chuẩn NIST \cite{ferraiolo2001} và tài liệu tham chiếu \cite{sandhu1996} định nghĩa như sau.
 
 \emph{Phân tách nhiệm vụ tĩnh} (Static Separation of Duty -- SSD): hai vai trò xung khắc không được gán đồng thời cho cùng một người dùng,
 \[ \forall u \in U:\; \neg\big( (u, r_1) \in UA \wedge (u, r_2) \in UA \big) \quad \text{với } (r_1, r_2) \in \mathit{SSD}. \]
@@ -129,32 +221,42 @@ Vì phụ thuộc trạng thái phiên nên ràng buộc này chỉ kiểm tra �
 
 \begin{nhanxet}
 \label{nx:hai-thoi-diem}
-Sự khác biệt giữa SSD và DSD minh họa một nguyên tắc thiết kế xuyên suốt luận văn: \emph{ràng buộc nào quyết định được từ mô hình thì kiểm chứng ở giai đoạn thiết kế; ràng buộc nào phụ thuộc trạng thái vận hành thì phải sinh thành điểm kiểm tra trong mã nguồn.} Nguyên tắc này được cụ thể hóa ở bước kiểm chứng của phương pháp trong Chương~\ref{ch:phuong-phap}.
+Sự khác biệt giữa SSD và DSD minh họa một nguyên tắc có tính quyết định đối với việc kiểm chứng chính sách: \emph{ràng buộc nào quyết định được từ đặc tả thì kiểm chứng ở giai đoạn thiết kế; ràng buộc nào phụ thuộc trạng thái vận hành thì phải sinh thành điểm kiểm tra trong mã nguồn.} Một mệnh đề nói về phiên làm việc đơn giản là không có giá trị chân lý khi hệ thống chưa chạy. Điều một phương pháp có thể bảo đảm là: mọi bất biến quyết định được ở mức mô hình đều được kiểm, và mọi bất biến không quyết định được đều được sinh thành mã kiểm tra chứ không bị bỏ quên.
 \end{nhanxet}
 
-RBAC$_3$ hợp nhất phân cấp vai trò với ràng buộc, làm nảy sinh các tương tác tinh tế -- chẳng hạn hai vai trò xung khắc có thể cùng bị kế thừa bởi một vai trò cấp trên. Luận văn không xử lý cấp này và xếp vào hướng nghiên cứu tiếp theo.
+RBAC$_3$ hợp nhất phân cấp vai trò với ràng buộc, làm nảy sinh các tương tác tinh tế -- chẳng hạn hai vai trò xung khắc tĩnh có thể cùng bị kế thừa bởi một vai trò cấp trên, khiến ràng buộc SSD bị vi phạm gián tiếp. Luận văn không xử lý cấp này và xếp vào hướng nghiên cứu tiếp theo. Ngoài RBAC, kiểm soát truy cập dựa trên thuộc tính (Attribute-Based Access Control -- ABAC) \cite{hu2014abac} cho phép biểu đạt chính sách linh hoạt hơn bằng cách quyết định trên thuộc tính của chủ thể, tài nguyên và ngữ cảnh, nhưng đánh đổi bằng độ phức tạp của việc phân tích và kiểm chứng: một chính sách ABAC nói chung không có cấu trúc tập hữu hạn để liệt kê và đối chiếu. Luận văn giới hạn phạm vi ở RBAC vì đây là mô hình phổ biến nhất trong phần mềm nghiệp vụ, có ngữ nghĩa hình thức đã được chuẩn hóa, và tập khái niệm hữu hạn của nó phù hợp với việc đặc tả bằng siêu mô hình.
 
-\subsection{Biểu diễn khía cạnh kiểm soát truy cập trong mô hình miền}
+\subsection{Các hướng biểu diễn kiểm soát truy cập trong mô hình miền}
 \label{subsec:bieu-dien-rbac}
 
-Ray và cộng sự \cite{ray2004} đề xuất biểu diễn chính sách RBAC bằng UML kết hợp OCL: các khái niệm vai trò, quyền, phiên được mô hình hóa bằng lớp UML, còn các ràng buộc RBAC$_2$ được phát biểu bằng bất biến OCL. Đóng góp đáng chú ý là ý tưởng \emph{mẫu vi phạm}: mỗi bất biến đi kèm một mẫu biểu đồ đối tượng mô tả tình huống vi phạm, giúp trực quan hóa lỗi cho người thiết kế. Sohr và cộng sự \cite{sohr2008} phát triển hướng này thành quy trình phân tích và quản lý chính sách RBAC bằng OCL trên công cụ USE.
+Trong các hệ thống có yêu cầu phân quyền phức tạp, kiểm soát truy cập là mối quan tâm trung tâm chứ không phải thứ yếu, và việc tách rời chính sách bảo mật khỏi lô-gic nghiệp vụ lõi dẫn tới không nhất quán giữa hành vi miền và quy tắc phân quyền. Các công trình biểu diễn RBAC ở mức mô hình có thể xếp theo ba hướng.
 
-Basin và cộng sự \cite{lodderstedt2002,basin2006} đi xa hơn về phía sinh mã với SecureUML: chính sách được đặc tả bằng một hồ sơ UML và hạ tầng kiểm soát truy cập được sinh tự động. Đây là công trình gần nhất với luận văn về tinh thần; điểm khác biệt đã được phân tích ở mục~\ref{subsec:thach-thuc}.
+\paragraph{Hướng phân tích chính sách bằng UML/OCL.}
+Ray và cộng sự \cite{ray2004} đề xuất biểu diễn chính sách RBAC bằng UML kết hợp OCL: các khái niệm vai trò, quyền, phiên được mô hình hóa bằng lớp UML theo dạng mẫu (template) có thể thể hiện hóa cho từng ứng dụng, còn các ràng buộc RBAC$_2$ được phát biểu bằng bất biến OCL. Đóng góp đáng chú ý là ý tưởng \emph{mẫu vi phạm}: mỗi bất biến đi kèm một mẫu biểu đồ đối tượng mô tả tình huống vi phạm, giúp trực quan hóa lỗi cho người thiết kế. Sohr và cộng sự \cite{sohr2008} phát triển hướng này thành quy trình phân tích và quản lý chính sách RBAC bằng OCL trên công cụ USE: chính sách được nạp như một mô hình lớp kèm bất biến, các trạng thái gán quyền được tạo thành biểu đồ đối tượng, và công cụ báo bất biến nào bị vi phạm; các ràng buộc động được xử lý bằng lô-gic thời gian. Hai công trình này đặt nền cho việc \emph{kiểm chứng} chính sách ở giai đoạn thiết kế. Giới hạn của chúng nằm ở chỗ chính sách được mô hình hóa như một hệ thống độc lập để phân tích: tài nguyên được bảo vệ chỉ là một lớp trừu tượng, không gắn với DM của ứng dụng cụ thể, và không có bước nào sinh mã từ chính sách đã kiểm chứng.
 
-Trong mạch nghiên cứu của nhóm, RBACDom \cite{levanvinh2026} được đề xuất như một DSL theo mối quan tâm bảo mật trong khuôn khổ UDML. RBACDom định nghĩa siêu mô hình nắm bắt các khái niệm RBAC chuẩn (người dùng, vai trò, quyền, phiên), biểu diễn quyền dưới dạng cặp \emph{thao tác} và \emph{tài nguyên được bảo vệ}, mô hình hóa tường minh ràng buộc phân tách nhiệm vụ qua siêu khái niệm trừu tượng \texttt{SoDConstraint} cùng hai chuyên biệt hóa SSD và DSD, đồng thời cung cấp chiến lược kết hợp luật để xử lý nhiều chú thích cùng áp dụng trên một nút hành vi. Luận văn kế thừa trực tiếp cách tổ chức khái niệm này và bổ sung phần cú pháp cụ thể dạng văn bản cùng bộ chuyển đổi mô hình tới nền tảng thực thi.
+\paragraph{Hướng an toàn hướng mô hình.}
+Lodderstedt, Basin và Doser \cite{lodderstedt2002} đề xuất SecureUML, một hồ sơ UML cho RBAC trong đó vai trò, quyền và ràng buộc được khai báo bằng khuôn dập trên biểu đồ lớp, rồi hạ tầng kiểm soát truy cập được sinh tự động từ mô hình. Công trình mở rộng \cite{basin2006} tổng quát hóa ý tưởng thành \emph{an toàn hướng mô hình}: SecureUML được kết hợp với một ngôn ngữ mô hình hóa thiết kế -- ComponentUML cho thành phần, ControllerUML cho bộ điều khiển -- và các bộ sinh mã cho nền tảng EJB và .NET được xây dựng. Đây là công trình gần nhất với luận văn về tinh thần: chính sách được đặc tả cùng mô hình thiết kế và mã thực thi được sinh ra. Ba điểm khác biệt cần nêu. Thứ nhất, SecureUML gắn với hệ công cụ mô hình hóa nặng của thời kỳ đó, không có cú pháp văn bản để quản lý bằng hệ thống quản lý phiên bản. Thứ hai, nó không đặt trong khuôn khổ hợp nhất nhiều mối quan tâm của DDD: chính sách gắn vào mô hình thiết kế chứ không vào DM có ngôn ngữ chung. Thứ ba, đầu ra là hạ tầng kiểm soát truy cập cho một nền tảng thành phần, không phải bản mẫu phần mềm phân tầng theo ngữ cảnh giới hạn như kiến trúc dịch vụ hiện đại đòi hỏi.
 
-Ngoài RBAC, các mô hình kiểm soát truy cập khác như kiểm soát truy cập dựa trên thuộc tính (ABAC) cho phép biểu đạt chính sách linh hoạt hơn nhưng đánh đổi bằng độ phức tạp của việc phân tích và kiểm chứng. Luận văn giới hạn phạm vi ở RBAC vì đây là mô hình phổ biến nhất trong phần mềm nghiệp vụ và có ngữ nghĩa hình thức đã được chuẩn hóa.
+\paragraph{Hướng tích hợp RBAC vào mô hình miền theo mối quan tâm.}
+Li và cộng sự \cite{li2022} chỉ ra sự thiếu hụt hỗ trợ hình thức cho việc tích hợp RBAC trong các hệ thống đa miền, đề xuất mô hình RBAC liên hệ thống với ánh xạ vai trò giữa các miền, và nhận xét rằng các cách tiếp cận thủ công thường dẫn đến không nhất quán. Trong mạch nghiên cứu của nhóm, UDML \cite{le2025udml} tổ chức ngôn ngữ thành các gói mô-đun -- \texttt{UDML.core} làm nền hợp nhất, \texttt{UDML.dcsl}, \texttt{UDML.agl} và \texttt{UDML.rbac} lần lượt nắm bắt mối quan tâm cấu trúc, hành vi và bảo mật -- và xác định kiểm soát truy cập là một mối quan tâm có thể hợp nhất ngang hàng hai mối quan tâm còn lại, trên nền mô hình RBAC liên hệ thống của Li và cộng sự. Đóng góp của UDML ở đây là \emph{chỗ đứng} của mối quan tâm bảo mật trong khung hợp nhất chứ chưa phải một đặc tả đầy đủ: gói \texttt{UDML.rbac} chưa được định nghĩa với siêu mô hình, cú pháp cụ thể và ngữ nghĩa tĩnh ở mức chi tiết như DCSL và AGL.
 
-\section{Chuẩn mô hình hóa hình thức và công cụ}
+Tổng hợp ba hướng cho thấy một tình trạng chung: các chính sách như SoD hoặc trạng thái truy cập động thường chỉ tồn tại trong mã nguồn hoặc trong ghi chú tài liệu, thiếu cơ chế kiểm chứng ở giai đoạn thiết kế, nên vi phạm chính sách có thể không được phát hiện cho tới khi kiểm thử hoặc vận hành. Hướng thứ nhất kiểm chứng được nhưng không gắn với DM và không sinh mã; hướng thứ hai sinh mã nhưng đứng ngoài khung hợp nhất mối quan tâm và không có bước kiểm chứng gắn với sinh mã; hướng thứ ba có khung hợp nhất nhưng chưa có ngôn ngữ đầy đủ cho mối quan tâm bảo mật. Việc tăng cường khả năng biểu đạt của DM để tích hợp RBAC cùng một cơ chế kiểm chứng đầy đủ và một quy trình sinh mã hoàn chỉnh vì thế vẫn là một trọng tâm nghiên cứu mở.
+
+\section{Chuẩn mô hình hóa hình thức, cơ chế tích hợp mối quan tâm và chuyển đổi mô hình}
+\label{sec:nen-tang}
+
+Ba mục trên cung cấp nền tảng lý thuyết; một phương pháp đi từ ý tưởng tới cài đặt còn cần bốn nền tảng kỹ thuật: một chuẩn ký pháp để viết đặc tả và công cụ để kiểm chứng nó, một cơ chế cho phép nhiều mối quan tâm cùng tồn tại trong một mô hình miền mà không cản trở nhau, các kỹ thuật chuyển đổi biến mô hình thành mã, và một kiến trúc đích quyết định hình dạng của mã sinh ra. Điểm chung của cả bốn là chúng đều đã được chuẩn hóa hoặc đã được kiểm chứng trong các công trình trước, nên có thể dựa vào mà không phải định nghĩa lại.
+
+\subsection{UML/OCL và các công cụ hỗ trợ đặc tả, kiểm chứng}
 \label{sec:uml-ocl}
 
-\subsection{Cơ chế hồ sơ của UML}
+\subsubsection{Cơ chế hồ sơ của UML}
 
-UML \cite{omg2017uml} cung cấp cơ chế mở rộng nhẹ gọi là \emph{hồ sơ} (profile): thay vì sửa đổi siêu mô hình chuẩn, người thiết kế định nghĩa các \emph{khuôn dập} (stereotype) gắn lên phần tử mô hình để bổ sung ngữ nghĩa chuyên biệt cho một miền. Đây là cách chuẩn hóa để một cộng đồng định nghĩa phương ngữ UML riêng mà vẫn dùng được công cụ UML thông thường. Luận văn định nghĩa cú pháp cụ thể của ngôn ngữ đặc tả chính sách RBAC theo đúng cơ chế này.
+UML \cite{omg2017uml} cung cấp hai cách mở rộng ngôn ngữ. Cách \emph{nặng} sửa đổi trực tiếp siêu mô hình UML, tạo ra một ngôn ngữ mới mà công cụ UML thông thường không hiểu. Cách \emph{nhẹ} dùng cơ chế \emph{hồ sơ} (profile): người thiết kế định nghĩa các \emph{khuôn dập} (stereotype) gắn lên phần tử mô hình sẵn có -- lớp, thuộc tính, quan hệ, gói -- kèm \emph{giá trị gắn thẻ} (tagged value) để bổ sung thuộc tính, và \emph{ràng buộc} bằng OCL để giới hạn cách dùng khuôn dập. Một khuôn dập không thay đổi ngữ nghĩa gốc của phần tử mà chỉ chuyên biệt hóa nó cho một miền; nhờ đó, một mô hình dùng hồ sơ vẫn là một mô hình UML hợp lệ và vẫn mở được bằng mọi công cụ UML. Đây là cách chuẩn hóa để một cộng đồng định nghĩa phương ngữ UML riêng, và cũng là cách SecureUML \cite{lodderstedt2002} đã dùng để đưa RBAC lên biểu đồ lớp.
 
-\subsection{Ngôn ngữ ràng buộc đối tượng}
+\subsubsection{Ngôn ngữ ràng buộc đối tượng và giới hạn về mức dễ dùng}
 
-OCL \cite{omg2014ocl} là ngôn ngữ khai báo, không có tác dụng phụ, dùng để phát biểu ràng buộc trên mô hình UML. Các cấu trúc được luận văn sử dụng gồm: khai báo bất biến trong một ngữ cảnh (\texttt{context}\ldots\texttt{inv}), các phép trên tập hợp (\texttt{forAll}, \texttt{exists}, \texttt{includes}, \texttt{isUnique}), phép duyệt quan hệ và các biểu thức lô-gic. Listing~\ref{lst:ocl} minh họa hai bất biến RBAC viết bằng OCL.
+OCL \cite{omg2014ocl} là ngôn ngữ khai báo, không có tác dụng phụ, dùng để phát biểu ràng buộc trên mô hình UML mà ký pháp sơ đồ không diễn đạt hết -- biểu đồ lớp mạnh ở cấu trúc và bội số, nhưng các quy tắc nghiệp vụ như ``tên vai trò là duy nhất'' hay ``không ai đồng thời giữ hai vai trò xung khắc'' không vẽ được. Các cấu trúc chính của OCL gồm: khai báo bất biến trong một ngữ cảnh (\texttt{context} \ldots\ \texttt{inv}), điều kiện trước và sau của thao tác (\texttt{pre}, \texttt{post}), các phép trên tập hợp (\texttt{forAll}, \texttt{exists}, \texttt{includes}, \texttt{isUnique}, \texttt{closure}), phép duyệt quan hệ và biểu thức lô-gic. Nhờ đặc tính khai báo và có ngữ nghĩa hình thức, OCL giảm mơ hồ so với ngôn ngữ tự nhiên, đồng thời hỗ trợ phân tích tĩnh và phát hiện vi phạm ở giai đoạn thiết kế. Listing~\ref{lst:ocl} minh họa hai bất biến RBAC viết bằng OCL.
 
 \begin{lstlisting}[language=OCL,caption={Hai bất biến RBAC viết bằng OCL},label={lst:ocl}]
 context Role
@@ -167,38 +269,65 @@ context User
       s.activeRoles->forAll(r | self.assignedRoles->includes(r)))
 \end{lstlisting}
 
-\subsection{Công cụ kiểm chứng USE}
+Hai giới hạn của OCL cần được ghi nhận. Thứ nhất, nhiều nghiên cứu về mức dễ dùng cho thấy cú pháp OCL gây khó cho những người không chuyên mô hình hóa ngay cả khi họ am hiểu nghiệp vụ; các cải tiến hiện có chủ yếu nâng cấp môi trường soạn thảo chứ vẫn xem OCL là một ngôn ngữ hình thức độc lập gắn kèm mô hình. Hệ quả cho việc thiết kế ngôn ngữ chính sách: những ràng buộc \emph{phổ biến và có cấu trúc cố định} -- như tám bất biến của ba cấp RBAC -- nên được nâng lên thành khuôn dập hay thuộc tính của ngôn ngữ để người thiết kế không phải viết OCL, còn OCL dành cho ràng buộc đặc thù. Thứ hai, việc dịch OCL sang mã kiểm tra trong các công cụ MDE thường chỉ phủ một tập con của ngôn ngữ và phụ thuộc vào quy ước công cụ; do đó, một phương pháp dùng OCL làm ngữ nghĩa tĩnh cần nói rõ tập con nào được đánh giá tự động và phần còn lại được kiểm bằng gì.
 
-USE \cite{gogolla2007} là môi trường đặc tả và kiểm chứng mô hình UML/OCL: người dùng khai báo mô hình cùng các bất biến, tạo các ảnh chụp trạng thái dưới dạng biểu đồ đối tượng, và công cụ báo bất biến nào bị vi phạm. USE được luận văn xác định là công cụ cho bước kiểm chứng hình thức ở giai đoạn thiết kế trong hướng hoàn thiện.
+\subsubsection{Công cụ kiểm chứng USE và Eclipse OCL}
 
-\subsection{PlantUML: cú pháp văn bản của biểu đồ UML}
+USE (UML-based Specification Environment) \cite{gogolla2007} là môi trường đặc tả và kiểm chứng mô hình UML/OCL: người dùng khai báo mô hình lớp cùng các bất biến, tạo các \emph{ảnh chụp trạng thái} dưới dạng biểu đồ đối tượng, và công cụ đánh giá mọi bất biến trên ảnh chụp đó rồi báo bất biến nào bị vi phạm bởi đối tượng nào. Cách làm này -- kiểm chứng bằng cách \emph{thể hiện hóa} mô hình rồi đánh giá bất biến -- chính là cách Sohr và cộng sự \cite{sohr2008} dùng để phân tích chính sách RBAC, và cũng là mô hình hoạt động tự nhiên cho việc kiểm chứng một chính sách đã đặc tả: mỗi chính sách là một ảnh chụp trạng thái, mỗi bất biến RBAC là một bất biến OCL. Eclipse OCL \cite{eclipseocl2025} cung cấp bộ phân tích và bộ đánh giá OCL tích hợp trong hệ sinh thái Eclipse Modeling, cho phép gắn ràng buộc trực tiếp vào siêu mô hình Ecore và đánh giá chúng lúc chạy trên mô hình. Cả hai công cụ đều xử lý OCL đầy đủ, nên chúng là lựa chọn phù hợp cho các biểu thức nằm ngoài tập con mà một bộ đánh giá nội bộ hỗ trợ.
 
-PlantUML \cite{plantuml2025} cho phép mô tả biểu đồ UML bằng văn bản thuần và kết xuất thành hình vẽ. So với các công cụ mô hình hóa đồ họa, ký pháp văn bản có ba ưu điểm quan trọng đối với luận văn: quản lý được bằng hệ thống quản lý phiên bản như mã nguồn; so sánh khác biệt giữa hai phiên bản dễ dàng; và tự động hóa được trong quy trình tích hợp liên tục. Hạn chế của PlantUML là không có siêu mô hình hình thức đi kèm -- đây chính là lý do luận văn phải tự định nghĩa siêu mô hình cú pháp trừu tượng riêng trong Chương~\ref{ch:phuong-phap}.
+\subsubsection{PlantUML: cú pháp văn bản của biểu đồ UML}
 
-\section{Tích hợp mối quan tâm và chuyển đổi mô hình}
+PlantUML \cite{plantuml2025} cho phép mô tả biểu đồ UML bằng văn bản thuần và kết xuất thành hình vẽ. Listing~\ref{lst:plantuml} minh họa một lớp mang khuôn dập cùng một quan hệ. So với các công cụ mô hình hóa đồ họa, ký pháp văn bản có ba ưu điểm quan trọng đối với việc đặc tả chính sách: quản lý được bằng hệ thống quản lý phiên bản như mã nguồn; so sánh khác biệt giữa hai phiên bản dễ dàng -- một thay đổi chính sách hiện ra đúng dưới dạng vài dòng thêm bớt; và tự động hóa được trong quy trình tích hợp liên tục. Hạn chế của PlantUML là nó \emph{không có siêu mô hình hình thức} đi kèm: văn phạm được định nghĩa bởi cài đặt, không bởi một đặc tả, nên một phương pháp dùng PlantUML làm cú pháp cụ thể phải tự định nghĩa siêu mô hình cú pháp trừu tượng và tự xác định tập con cú pháp mà nó chấp nhận.
+
+\begin{lstlisting}[language=PlantUML,caption={Lớp mang khuôn dập và quan hệ trong ký pháp PlantUML},label={lst:plantuml}]
+package "EnrollmentContext" <<BoundedContext>> {
+  class Student <<AggregateRoot>> {
+    - id: string
+    - name: string
+    + enroll(courseId: string): Enrolment
+  }
+  class Enrolment <<Entity>>
+  Student "1" *-- "0..*" Enrolment : enrolls-in
+}
+\end{lstlisting}
+
+\subsection{Tích hợp mối quan tâm: các cơ chế hợp thành ngôn ngữ và mô hình miền hợp nhất}
 \label{sec:tich-hop}
 
-\subsection{Tích hợp các mối quan tâm vào mô hình miền hợp nhất}
+Trong kỹ nghệ phần mềm, một \emph{mối quan tâm} (concern) là một khía cạnh của hệ thống cần được mô hình hóa một cách chuyên biệt để biểu diễn đầy đủ các khái niệm, quan hệ và quy tắc liên quan. Nguyên tắc \emph{phân tách mối quan tâm} khuyến nghị mỗi mối quan tâm được đặc tả bằng một ngôn ngữ phù hợp với đặc điểm biểu diễn của nó, thay vì dùng một ngôn ngữ tổng quát cho mọi khía cạnh. Kiczales và cộng sự \cite{kiczales1997} chỉ ra rằng một số mối quan tâm -- ghi nhật ký, giao dịch, bảo mật -- là \emph{cắt ngang}: chúng không phân rã được theo cùng trục với mối quan tâm chính, nên khi cài đặt bằng cơ chế mô-đun thông thường sẽ bị rải rác qua nhiều mô-đun và trộn lẫn với lô-gic chính. Lập trình hướng khía cạnh là câu trả lời ở mức mã; ở mức mô hình, câu trả lời là các ngôn ngữ theo mối quan tâm và cơ chế hợp thành chúng.
 
-UDML \cite{le2025udml,levanvinh2026} giải quyết bài toán: làm thế nào để nhiều mối quan tâm cùng tồn tại trong một DM hợp nhất mà không cản trở nhau. Giải pháp dựa trên hai khái niệm: \emph{phần tử có thể gắn chú thích} (Annotable) và \emph{chú thích} (Annotation) -- đơn vị thông tin thuộc về một mối quan tâm, gắn vào một phần tử và giữ tham chiếu ngược tới phần tử đó. Nhờ vậy, các mối quan tâm có thể tham chiếu chéo lẫn nhau ngay trong cây cú pháp trừu tượng.
+Voelter \cite{voelter2013} phân loại các cơ chế hợp thành ngôn ngữ thành bốn nhóm. \emph{Tham chiếu} (referencing): ngôn ngữ này trỏ tới phần tử của ngôn ngữ kia bằng tên, hai ngôn ngữ giữ nguyên độc lập. \emph{Mở rộng} (extension): ngôn ngữ mới bổ sung khái niệm vào ngôn ngữ gốc và tái dùng cú pháp của nó. \emph{Tái sử dụng} (reuse): một ngôn ngữ được thiết kế để nhúng vào nhiều ngôn ngữ chủ khác nhau. \emph{Nhúng} (embedding): biểu thức của ngôn ngữ này xuất hiện bên trong cú pháp của ngôn ngữ kia. Đối với việc hợp nhất một mối quan tâm cắt ngang vào DM, cơ chế phù hợp là \emph{tham chiếu}: ngôn ngữ chính sách trỏ tới lớp miền bằng tên, nhờ đó hai ngôn ngữ tiến hóa độc lập và mối quan tâm chính sách có thể lược bỏ mà không để lại dấu vết.
 
-Ba tính chất mà một phép hợp nhất đúng đắn phải bảo đảm là: \emph{tính trực giao} -- bổ sung hoặc loại bỏ một mối quan tâm không làm thay đổi ngữ nghĩa của các mối quan tâm còn lại; \emph{tính gắn kết} -- mọi tham chiếu chéo đều phân giải được về một phần tử tồn tại; và \emph{tính truy vết} -- mỗi phần tử của DM hợp nhất giữ được liên kết về vị trí xuất xứ trong đặc tả nguồn. Ba tính chất này được luận văn sử dụng làm tiêu chí thiết kế cho bước hợp nhất mô hình và được kiểm tra lại trong phần đánh giá.
+Việc hợp nhất các DSL theo mối quan tâm có thể thực hiện ở hai mức. Hợp nhất \emph{dựa vào siêu mô hình} tổng hợp các siêu mô hình thành một siêu mô hình cố kết, rồi ánh xạ một--một sang các aDSL nội sinh; hướng này chặt chẽ nhưng quá trình tích hợp thường bán tự động và phụ thuộc mạnh vào chất lượng ánh xạ. Hợp nhất \emph{dựa vào cây cú pháp trừu tượng} (AST) thao tác trực tiếp trên cấu trúc ngôn ngữ, gắn các nút của mối quan tâm này vào nút của mối quan tâm kia; hướng này linh hoạt và cho phép chèn thêm mối quan tâm mới mà không phải định nghĩa lại siêu mô hình tổng hợp. UDML \cite{le2025udml} chọn hướng thứ hai với hai khái niệm: \emph{phần tử có thể gắn chú thích} (Annotable) và \emph{chú thích} (Annotation) -- đơn vị thông tin thuộc về một mối quan tâm, gắn vào một phần tử và giữ tham chiếu ngược tới phần tử đó. Nhờ vậy, các mối quan tâm có thể tham chiếu chéo lẫn nhau ngay trong cây cú pháp trừu tượng, và một công cụ có thể duyệt cây để thu thập mọi chú thích thuộc về một mối quan tâm.
 
-\subsection{Các kỹ thuật chuyển đổi mô hình}
+Ba tính chất mà UDML \cite{le2025udml} đặt ra cho một phép hợp nhất đúng đắn là: \emph{tính trực giao} -- bổ sung hoặc loại bỏ một mối quan tâm không làm thay đổi ngữ nghĩa của các mối quan tâm còn lại; \emph{tính gắn kết} -- mọi tham chiếu chéo đều phân giải được về một phần tử tồn tại; và \emph{tính truy vết} -- mỗi phần tử của DM hợp nhất giữ được liên kết về vị trí xuất xứ trong đặc tả nguồn. Ba tính chất này vừa là tiêu chí thiết kế cho bất kỳ cơ chế hợp nhất nào, vừa là tiêu chí kiểm chứng: mỗi tính chất đều đo được bằng thực nghiệm -- trực giao bằng phép lược bỏ mối quan tâm rồi so sánh kết quả, gắn kết bằng phép phân giải mọi tham chiếu, truy vết bằng việc đối chiếu sản phẩm với phần tử nguồn.
 
-Trong kỹ nghệ hướng mô hình, hai loại chuyển đổi được sử dụng phổ biến: chuyển đổi mô hình sang mô hình (M2M) biến một mô hình nguồn thành mô hình đích theo một tập luật, và chuyển đổi mô hình sang văn bản (M2T) sinh chế tác văn bản, thường là mã nguồn, từ mô hình \cite{levanvinh2026}. Phương pháp của luận văn sử dụng cả hai loại: các bước hợp nhất và làm giàu mô hình thuộc loại M2M, còn bước sinh mã thuộc loại M2T dựa trên mẫu.
+\subsection{Chuyển đổi mô hình: M2M, M2T và sinh mã dựa trên mẫu}
 
-Cơ chế sinh mã dựa trên mẫu đòi hỏi một nguyên tắc kỷ luật: mẫu sinh nên giữ ở dạng \emph{không chứa lô-gic}, mọi tính toán được thực hiện trước trong bước chuẩn bị dữ liệu. Nhờ đó lô-gic sinh mã kiểm thử được bằng kiểm thử đơn vị thông thường thay vì phải so khớp văn bản kết xuất.
+Trong kỹ nghệ hướng mô hình, chuyển đổi mô hình là cơ chế trung tâm để tự động hóa phát triển phần mềm \cite{brambilla2017}. Kiến trúc hướng mô hình của OMG tổ chức các mô hình theo ba mức trừu tượng -- mô hình độc lập tính toán, mô hình độc lập nền tảng và mô hình chuyên biệt nền tảng -- và dùng các phép chuyển đổi để liên kết chúng. Một điểm có tính nguyên lý: chuyển đổi mô hình \emph{được xác lập ở mức siêu mô hình}, không phải giữa hai mô hình cụ thể. Hình~\ref{fig:chuyen-doi-mo-hinh} mô tả kiến trúc chung: bộ chuyển đổi được xác định bởi cặp siêu mô hình nguồn và đích cùng định nghĩa chuyển đổi viết trong một ngôn ngữ chuyển đổi; bộ thực thi đọc một mô hình nguồn tuân thủ siêu mô hình nguồn và ghi ra mô hình đích tuân thủ siêu mô hình đích. Phát biểu ở mức siêu mô hình cho phép tách đặc tả chuyển đổi khỏi các mô hình thể hiện, nhờ đó chuyển đổi tái sử dụng được và kiểm chứng được.
 
-\subsection{Kiến trúc đích và nền tảng cài đặt}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{hinh/hinh-chuyen-doi-mo-hinh.pdf}
+\caption{Kiến trúc chung của một bộ chuyển đổi mô hình}
+\label{fig:chuyen-doi-mo-hinh}
+\end{figure}
 
-Kiến trúc TMSA \cite{le2025tmsa} đề xuất tổ chức các dịch vụ của một hệ thống theo cấu trúc đa cây: mỗi dịch vụ là một cây các mô-đun hướng miền, các cạnh liên cây cho phép tái sử dụng cấu trúc giữa các dịch vụ. Siêu mô hình của TMSA được đặc tả bằng UML/OCL, cho phép định nghĩa hình thức các mẫu chịu lỗi và các phép tiến hóa kiến trúc. Đối với luận văn, TMSA cung cấp định hướng về cấu trúc đầu ra: mỗi ngữ cảnh giới hạn tương ứng một mô-đun dịch vụ phân tầng, và điểm kiểm soát truy cập được đặt tại ranh giới của mô-đun đó. Các nguyên tắc thiết kế vi dịch vụ tổng quát hơn được trình bày trong \cite{newman2021,richardson2018}.
+Czarnecki và Helsen \cite{czarnecki2006} phân loại các cách tiếp cận chuyển đổi theo đặc trưng. Với chuyển đổi \emph{mô hình sang mô hình} (M2M), các nhóm chính gồm: \emph{khai báo -- quan hệ}, mô tả quan hệ giữa phần tử nguồn và đích để công cụ tự tìm cách thỏa mãn; \emph{mệnh lệnh -- thao tác}, mô tả tường minh trình tự các bước; \emph{chuyển đổi đồ thị}, biểu diễn mô hình bằng đồ thị định kiểu và chuyển đổi bằng luật viết lại đồ thị; và \emph{lai}, kết hợp các nhóm trên. Trong thực tiễn, ATL \cite{jouault2008} là ngôn ngữ lai được dùng rộng rãi, còn QVT \cite{omg2016qvt} là chuẩn của OMG với cả biến thể quan hệ và biến thể thao tác. Với chuyển đổi \emph{mô hình sang văn bản} (M2T), hai nhóm chính là \emph{dựa vào bộ duyệt} -- mã được sinh bằng cách duyệt mô hình và ghi từng mảnh văn bản -- và \emph{dựa vào mẫu} -- văn bản đích được viết sẵn dưới dạng khuôn có chỗ trống, và bộ sinh điền dữ liệu từ mô hình vào; Acceleo \cite{acceleo2025} là hiện thực tiêu biểu của chuẩn MOF Model-to-Text. Cách tiếp cận dựa vào mẫu có ưu thế rõ khi mã đích có cấu trúc lặp lại và người bảo trì mẫu là người biết nền tảng đích: mẫu đọc như mã đích, chỉ khác ở các chỗ trống.
 
-Về nền tảng cài đặt, luận văn chọn NestJS \cite{nestjs2025} -- khung phát triển ứng dụng phía máy chủ trên nền Node.js với kiến trúc mô-đun rõ ràng. Ba cơ chế của nền tảng này được bước sinh mã sử dụng trực tiếp: \emph{bộ bảo vệ} (guard) chặn yêu cầu trước khi tới bộ xử lý, là nơi tự nhiên để đặt điểm kiểm soát truy cập; \emph{chú thích tùy biến và phản chiếu siêu dữ liệu} cho phép gắn thông tin vai trò, quyền yêu cầu lên từng điểm cuối và đọc lại lúc chạy; và \emph{mô-đun CQRS} tách lệnh khỏi truy vấn, phù hợp với cách AGL mô tả ca sử dụng như một chuỗi hành động. Việc chọn TypeScript làm ngôn ngữ đích cũng có lý do về mặt phương pháp: chú thích tùy biến của TypeScript là tương đương trực tiếp của chú thích trong Java, nên tinh thần aDSL của mạch DCSL/AGL được bảo toàn khi chuyển sang hệ sinh thái này.
+Về chất lượng, một bộ chuyển đổi cần được xét trên các thuộc tính: \emph{đúng đắn cú pháp} của mô hình đích, \emph{đúng đắn ngữ nghĩa} -- mô hình đích bảo toàn ý nghĩa của mô hình nguồn, \emph{đầy đủ} -- mọi phần tử nguồn cần chuyển đều được chuyển, và các thuộc tính hành vi như \emph{tính dừng} và \emph{tính hội tụ} -- chuyển đổi luôn kết thúc và cho cùng kết quả bất kể thứ tự áp dụng luật \cite{czarnecki2006,brambilla2017}. Đối với DM giàu ngữ nghĩa, thách thức cốt lõi không phải ánh xạ cấu trúc mà là bảo toàn ngữ nghĩa nghiệp vụ qua toàn bộ chuỗi chuyển đổi.
+
+Trong sinh phần mềm từ mô hình, M2M và M2T hiếm khi tồn tại tách biệt mà được tổ chức thành một \emph{chuỗi}: mô hình nguồn trước hết được chuyển thành một biểu diễn trung gian có ngữ nghĩa rõ ràng -- nơi các phép làm giàu, phân giải tham chiếu và kiểm chứng được thực hiện -- rồi từ biểu diễn đó mới sinh ra mã. Cách tổ chức này giảm phụ thuộc trực tiếp giữa đặc tả và mã, và cho phép kiểm thử từng bước độc lập. Nó cũng dẫn tới một nguyên tắc kỷ luật cho sinh mã dựa vào mẫu: mẫu sinh nên giữ ở dạng \emph{không chứa lô-gic}, mọi tính toán được thực hiện trước trong bước chuẩn bị dữ liệu trên biểu diễn trung gian. Nhờ đó lô-gic sinh mã kiểm thử được bằng kiểm thử đơn vị thông thường thay vì phải so khớp văn bản kết xuất, và mẫu đủ đơn giản để người không viết ra nó vẫn đọc hiểu.
+
+\subsection{Kiến trúc đích: vi dịch vụ phân tầng theo ngữ cảnh giới hạn và nền tảng NestJS}
+
+Bản mẫu phần mềm sinh ra cần tuân theo một kiến trúc đích được xác định trước, vì kiến trúc quyết định mã sinh ra có hình dạng gì và điểm kiểm soát truy cập đặt ở đâu. Trong các kiến trúc dịch vụ hiện đại \cite{newman2021,richardson2018}, ngữ cảnh giới hạn của DDD được xem là đơn vị phân rã tự nhiên: mỗi ngữ cảnh trở thành một dịch vụ có mô hình dữ liệu, chu kỳ triển khai và -- điều quan trọng đối với luận văn -- tập vai trò riêng. Kiến trúc TMSA \cite{le2025tmsa} cụ thể hóa ý tưởng này cho mạch nghiên cứu DDD của nhóm: các dịch vụ của một hệ thống được tổ chức theo cấu trúc \emph{đa cây}, mỗi dịch vụ là một cây các mô-đun hướng miền theo MOSA, các cạnh liên cây cho phép tái sử dụng cấu trúc giữa các dịch vụ; siêu mô hình của TMSA được đặc tả bằng UML/OCL, cho phép định nghĩa hình thức các mẫu chịu lỗi và các phép tiến hóa kiến trúc. Đối với bài toán kiểm soát truy cập, TMSA cung cấp hai định hướng: mỗi ngữ cảnh giới hạn tương ứng một mô-đun dịch vụ phân tầng theo bốn tầng của DDD, và điểm kiểm soát truy cập được đặt tại ranh giới của mô-đun đó -- đúng vị trí mà phân tích ở mục~\ref{sec:ddd} đã chỉ ra.
+
+Về nền tảng cài đặt, luận văn chọn NestJS \cite{nestjs2025} -- khung phát triển ứng dụng phía máy chủ trên nền Node.js với kiến trúc mô-đun rõ ràng và hệ thống tiêm phụ thuộc. Ba cơ chế của nền tảng này khớp trực tiếp với các khái niệm đã trình bày. \emph{Bộ bảo vệ} (guard) là thành phần chặn yêu cầu trước khi nó tới bộ xử lý, được gắn ở mức bộ điều khiển hoặc mức điểm cuối; đây là hiện thân của điểm kiểm soát truy cập tại ranh giới tầng trình diễn -- tầng ứng dụng. \emph{Chú thích tùy biến và phản chiếu siêu dữ liệu} cho phép gắn thông tin vai trò hoặc quyền yêu cầu lên từng điểm cuối bằng cú pháp khai báo, rồi đọc lại lúc chạy; đây là tương đương trực tiếp của chú thích trong Java, nên tinh thần aDSL của mạch DCSL/AGL được bảo toàn khi chuyển sang hệ sinh thái TypeScript. \emph{Mô-đun CQRS} tách lệnh khỏi truy vấn, phù hợp với cách AGL mô tả ca sử dụng như một chuỗi hành động mô-đun: mỗi ca sử dụng trở thành một bộ xử lý lệnh. Việc chọn một nền tảng khác Java so với các công trình trước của nhóm còn có ý nghĩa kiểm chứng: nếu bốn bước đầu của một phương pháp thực sự độc lập với công nghệ, thì việc đổi nền tảng đích chỉ đòi hỏi viết lại bộ mẫu sinh.
 
 \section{Tổng kết chương}
 \label{sec:tong-ket-c2}
 
-Chương này đã trình bày cơ sở lý thuyết và tổng quan tình hình nghiên cứu của luận văn. Từ DDD, luận văn kế thừa khái niệm DM, ngữ cảnh giới hạn, các khuôn mẫu chiến thuật và kiến trúc phân tầng. Từ lý thuyết DSL, luận văn kế thừa khung ba thành phần -- cú pháp trừu tượng, cú pháp cụ thể, ngữ nghĩa -- làm bố cục trình bày cho ngôn ngữ đề xuất, cùng tinh thần aDSL của DCSL và AGL. Từ RBAC, luận văn kế thừa ngữ nghĩa hình thức của các cấp RBAC$_0$--RBAC$_2$ (Định nghĩa~\ref{dn:rbac0} và Định nghĩa~\ref{dn:rbac1}) làm cơ sở cho siêu mô hình chính sách và cho thuật toán lan truyền quyền. Từ UML/OCL, luận văn kế thừa cơ chế hồ sơ cho cú pháp cụ thể và OCL cho ngữ nghĩa tĩnh. Từ UDML và RBACDom, luận văn kế thừa cơ chế hợp nhất mối quan tâm cùng ba tính chất trực giao, gắn kết, truy vết, và cách tổ chức khái niệm của mối quan tâm bảo mật.
+Chương này đã trình bày bốn dòng tri thức làm cơ sở cho luận văn và, ở mỗi dòng, chỉ ra điều luận văn kế thừa cùng giới hạn của các hướng tiếp cận hiện có. Từ thiết kế hướng miền, luận văn kế thừa khái niệm mô hình miền hướng thực thi với hai yêu cầu khả thi -- thỏa mãn, ngữ cảnh giới hạn với vai trò ba loại đơn vị phân rã, các khuôn mẫu chiến thuật và kiến trúc bốn tầng giữ tầng miền thuần khiết -- điều kiện để kiểm soát truy cập trực giao với cấu trúc. Từ lý thuyết ngôn ngữ chuyên biệt miền, luận văn kế thừa khung ba thành phần cú pháp trừu tượng, cú pháp cụ thể, ngữ nghĩa làm bố cục định nghĩa ngôn ngữ, phương pháp siêu mô hình hóa với ba lợi ích của nó, và tinh thần aDSL của DCSL và AGL cùng cách hai ngôn ngữ này cùng tồn tại trên một mô hình bằng tham chiếu chéo. Từ RBAC, luận văn kế thừa các khái niệm chuẩn NIST, ngữ nghĩa hình thức của ba cấp RBAC$_0$--RBAC$_2$ (Định nghĩa~\ref{dn:rbac0} và Định nghĩa~\ref{dn:rbac1}), và nhận xét về ranh giới giữa hai thời điểm kiểm chứng (Nhận xét~\ref{nx:hai-thoi-diem}). Từ kỹ nghệ hướng mô hình, luận văn kế thừa cơ chế hồ sơ UML cho cú pháp cụ thể, OCL cho ngữ nghĩa tĩnh cùng nhận thức về giới hạn dễ dùng của nó, mô hình kiểm chứng bằng thể hiện hóa của USE, cơ chế hợp thành bằng tham chiếu và ba tính chất trực giao, gắn kết, truy vết của UDML, chuỗi chuyển đổi M2M -- M2T với biểu diễn trung gian, nguyên tắc mẫu sinh không chứa lô-gic, và kiến trúc đích phân tầng theo ngữ cảnh giới hạn của TMSA.
 
-Khoảng trống mà các công trình trên còn để lại -- và cũng là nội dung của chương tiếp theo -- là một quy trình hoàn chỉnh cho phép đặc tả chính sách RBAC bằng ký pháp văn bản trên biểu đồ lớp, kiểm chứng chính sách đó ở giai đoạn thiết kế, và sinh tự động bản mẫu phần mềm có lớp thực thi kiểm soát truy cập đầy đủ, kèm quan hệ truy vết hai chiều giữa mô hình và mã nguồn.
+Đặt các công trình về kiểm soát truy cập cạnh nhau cho thấy khoảng trống một cách rõ ràng. Hướng phân tích chính sách bằng UML/OCL kiểm chứng được nhưng xem chính sách là hệ thống độc lập, không gắn với mô hình miền của ứng dụng và không sinh mã. Hướng an toàn hướng mô hình sinh mã từ hồ sơ UML nhưng đứng ngoài khung hợp nhất mối quan tâm của DDD, không có cú pháp văn bản và không có bước kiểm chứng gắn với bước sinh mã. Mạch aDSL có khung hợp nhất mối quan tâm và đã dành sẵn chỗ đứng cho mối quan tâm bảo mật, nhưng chưa đặc tả mối quan tâm đó thành một ngôn ngữ đầy đủ với siêu mô hình, cú pháp cụ thể và ngữ nghĩa tĩnh. Chưa có công trình nào nối liền ba việc -- đặc tả chính sách RBAC ngay trong mô hình miền bằng ký pháp văn bản trên biểu đồ lớp, kiểm chứng chính sách đó ở giai đoạn thiết kế, và sinh tự động bản mẫu phần mềm có lớp thực thi kiểm soát truy cập kèm quan hệ truy vết hai chiều -- thành một quy trình công cụ hoàn chỉnh. Đó là khoảng trống mà luận văn hướng tới.
